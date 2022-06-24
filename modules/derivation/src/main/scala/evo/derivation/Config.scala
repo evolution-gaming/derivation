@@ -57,6 +57,8 @@ object Config {
     inline def derived[T]: Config[T] = fromAnnots(readAnnotations[T])
 
     private def fromAnnots(annotations: Annotations): Config[Nothing] =
+        println(annotations)
+
         val topApplied = annotations.forType.foldLeft(default)(_.applyAnnotation(_))
 
         annotations.byField.foldLeft(topApplied) { case (prev, (name, annotations)) =>
@@ -87,7 +89,9 @@ object Config {
 
         val topAnns = Varargs(sym.annotations.flatMap(annotationTree))
 
-        val fieldAnns = Varargs(sym.caseFields.map(fieldAnnotations))
+        val caseParams = sym.primaryConstructor.paramSymss.take(1).flatten
+        
+        val fieldAnns = Varargs(caseParams.map(fieldAnnotations))
 
         '{
             Annotations(
