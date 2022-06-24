@@ -33,12 +33,12 @@ case class Config[+T](
 
 end Config
 
-object Config {
+object Config:
     type Renaming = String => String
 
     val default: Config[Nothing] = Config()
 
-    val snakeCase: Renaming = _.replace("(?<=p{Lower})(\\p{Upper})", "_").nn.toLowerCase.nn
+    val snakeCase: Renaming = _.split("(?<=\\p{Lower})(?=\\p{Upper})").nn.mkString("_").nn.toLowerCase.nn
 
     case class ForProduct(
         renamed: Option[String] = None,
@@ -54,51 +54,85 @@ object Config {
 
     end ForProduct
 
-    inline def derived[T]: Config[T] = fromAnnots(readAnnotations[T])
+    inline def derived[T]: Config[T] =
+        fromAllAnnots(readAnnotations[T])
 
     private def fromAnnots(annotations: Annotations): Config[Nothing] =
-        println(annotations)
-
         val topApplied = annotations.forType.foldLeft(default)(_.applyAnnotation(_))
 
         annotations.byField.foldLeft(topApplied) { case (prev, (name, annotations)) =>
             annotations.foldLeft(prev) { _.applyAnnotation(_, Some(name)) }
         }
 
+    private def fromAllAnnots(annotations: AllAnnotations): Config[Nothing] =
+        val config = fromAnnots(annotations.top)
+
+        val byConstructor = annotations.subtypes.view.mapValues(fromAnnots(_).top).toMap
+
+        config.copy(constructors = byConstructor)
+
     private type DA = DerivationAnnotation
 
-    private inline def readAnnotations[T]: Annotations = ${ topAnnotations[T] }
+    private inline def readAnnotations[T]: AllAnnotations = ${ allAnnotations[T] }
 
     private case class Annotations(
         forType: Vector[DA],
         byField: Map[String, Vector[DA]],
     )
 
-    private def topAnnotations[T: Type](using q: Quotes): Expr[Annotations] =
-        import q.reflect.*
-        val sym = TypeRepr.of[T].typeSymbol
+    private case class AllAnnotations(
+        top: Annotations,
+        subtypes: Map[String, Annotations],
+    )
 
-        def annotationTree(tree: Tree): Option[Expr[DA]] =
+    private def allAnnotations[T: Type](using Quotes): Expr[AllAnnotations] = ConfigMacro().allAnnotations[T]
+
+    private class ConfigMacro(using q: Quotes):
+        import q.reflect.*
+        def allAnnotations[T: Type]: Expr[AllAnnotations] =
+            val sym = TypeRepr.of[T].typeSymbol
+
+            '{
+                AllAnnotations(
+                  top = ${ topAnnotations(sym) },
+                  subtypes = ${ subtypeAnnotations(sym) },
+                )
+            }
+
+        private def annotationTree(tree: Tree): Option[Expr[DA]] =
             Option.when(tree.isExpr)(tree.asExpr).filter(_.isExprOf[DA]).map(_.asExprOf[DA])
 
-        def fieldAnnotations(s: Symbol): Expr[(String, Vector[DA])] =
+        private def fieldAnnotations(s: Symbol): Expr[(String, Vector[DA])] =
             val annots = Varargs(s.annotations.flatMap(annotationTree))
             val name = Expr(s.name)
 
             '{ $name -> Vector($annots: _*) }
 
-        val topAnns = Varargs(sym.annotations.flatMap(annotationTree))
+        private def topAnnotations(sym: Symbol): Expr[Annotations] =
+            val topAnns = Varargs(sym.annotations.flatMap(annotationTree))
+            val caseParams = sym.primaryConstructor.paramSymss.take(1).flatten
+            val fieldAnns = Varargs(caseParams.map(fieldAnnotations))
 
-        val caseParams = sym.primaryConstructor.paramSymss.take(1).flatten
-        
-        val fieldAnns = Varargs(caseParams.map(fieldAnnotations))
+            '{
+                Annotations(
+                  forType = Vector($topAnns: _*),
+                  byField = Map($fieldAnns: _*),
+                )
+            }
+        end topAnnotations
 
-        '{
-            Annotations(
-              forType = Vector($topAnns: _*),
-              byField = Map($fieldAnns: _*),
-            )
-        }
-    end topAnnotations
+        private def subtypeAnnotation(sym: Symbol): Expr[(String, Annotations)] =
+            val name = Expr(sym.name)
+            val annots = topAnnotations(sym)
 
-}
+            '{ ($name, $annots) }
+
+        private def subtypeAnnotations(sym: Symbol): Expr[Map[String, Annotations]] =
+            val subtypes = Varargs(sym.children.map(subtypeAnnotation))
+
+            '{ Map($subtypes: _*) }
+
+        end subtypeAnnotations
+    end ConfigMacro
+
+end Config
