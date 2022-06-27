@@ -1,5 +1,5 @@
 package evo.derivation
-import scala.compiletime.summonFrom
+import scala.compiletime.{summonFrom, constValueTuple}
 
 import Config.Renaming
 import scala.deriving.Mirror
@@ -31,6 +31,12 @@ case class Config[+T](
                     case None            => this
                     case Some(fieldName) => copy(top = top.embedField(fieldName))
 
+    def name(constructor: String): String =
+        constructors.get(constructor).flatMap(_.renamed).getOrElse(constructorRenaming(constructor))
+
+    inline def constructorNames[S](using p: Mirror.SumOf[S]): IArray[String] =
+        constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]].map(name)
+
 end Config
 
 object Config:
@@ -51,6 +57,11 @@ object Config:
             case None          => copy(renamed = Some(newName))
 
         def embedField(field: String) = copy(embedFields = embedFields + field)
+
+        def name(field: String) = fieldNames.getOrElse(field, fieldRenaming(field))
+
+        inline def fieldNames[P](using p: Mirror.ProductOf[P]): IArray[String] =
+            constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]].map(name)
 
     end ForProduct
 
