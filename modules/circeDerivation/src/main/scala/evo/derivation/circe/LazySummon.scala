@@ -1,11 +1,16 @@
 package evo.derivation.circe
 
 import scala.annotation.implicitNotFound
-import scala.compiletime.summonAll
+import scala.compiletime.{summonAll, uninitialized}
 
 @implicitNotFound("can't find given instance of $Req that's required for field or constructor $Name")
 trait LazySummon[Name, TC[_], A]:
+    type FieldType = A
     def tc: TC[A]
+
+    final def use[R](f: TC[A] ?=> R): R =
+        given TC[A] = tc
+        f
 
 object LazySummon:
     type Applied[TC[_], NR] = NR match
@@ -29,3 +34,40 @@ object LazySummon:
             }
 
             Tuple.fromIArray(elements).asInstanceOf[Tuple.Map[Fields, Res]]
+
+        def useOnPlain[Res[_]](fields: Fields)(f: [A] => (TC[A], A) => Res[A]): Tuple.Map[Fields, Res] =
+            useOn[[a] =>> a, Res](fields.asInstanceOf[Tuple.Map[Fields, [a] =>> a]])(f)
+
+        def useEitherFast[Info, E](infos: IArray[Info])(
+            f: (summon: LazySummon[_, TC, _], info: Info) => Either[E, summon.FieldType],
+        ): Either[E, Fields] =
+            var error: Left[E, Nothing] | Null = null
+            val elements = all.zip(infos).map[Any] { (inst, info) =>
+                f(inst, info) match
+                    case err @ Left(e) =>
+                        error = err.asInstanceOf[Left[E, Nothing]]
+                        null
+                    case Right(a) => a
+            }
+            error match
+                case null                 => Right(Tuple.fromIArray(elements).asInstanceOf[Fields])
+                case err: Left[E, Fields] => err
+        end useEitherFast
+
+        def useEithers[Info, E](infos: IArray[Info])(
+            f: (summon: LazySummon[_, TC, _], info: Info) => Either[E, summon.FieldType],
+        ): Either[Vector[E], Fields] =
+            val errors = Vector.newBuilder[E]
+            var err = false
+            val elements = all.zip(infos).map[Any] { (inst, info) =>
+                f(inst, info) match
+                    case Left(e) =>
+                        err = true
+                        errors += e
+                        null
+                    case Right(a) => a
+            }
+            if err
+            then Left(errors.result)
+            else Right(Tuple.fromIArray(elements).asInstanceOf[Fields])
+        end useEithers

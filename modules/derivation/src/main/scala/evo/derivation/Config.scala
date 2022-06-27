@@ -60,10 +60,20 @@ object Config:
 
         def name(field: String) = fieldNames.getOrElse(field, fieldRenaming(field))
 
-        inline def fieldNames[P](using p: Mirror.ProductOf[P]): IArray[String] =
-            constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]].map(name)
+        private inline def productFields[P](using p: Mirror.ProductOf[P]): IArray[String] =
+            constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]]
+
+        def fieldInfo(field: String): FieldInfo = FieldInfo(name = name(field), embed = embedFields(field))
+
+        inline def names[P: Mirror.ProductOf]: IArray[String] = productFields[P].map(name)
+
+        inline def embedded[P: Mirror.ProductOf]: IArray[Boolean] = productFields[P].map(embedFields)
+
+        inline def fieldInfos[P: Mirror.ProductOf]: IArray[FieldInfo] = productFields[P].map(fieldInfo)
 
     end ForProduct
+
+    case class FieldInfo(name: String, embed: Boolean)
 
     inline def derived[T]: Config[T] =
         fromAllAnnots(readAnnotations[T])
