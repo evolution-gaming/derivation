@@ -68,7 +68,7 @@ object Config:
         def name(field: String) = fieldNames.getOrElse(field, fieldRenaming(field))
 
         private inline def productFields[P](using p: Mirror.ProductOf[P]): IArray[String] =
-            constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]]
+            constValueTuple[p.MirroredElemLabels].toIArray.map(_.asInstanceOf[String])
 
         def fieldInfo(field: String): FieldInfo = FieldInfo(name = name(field), embed = embedFields(field))
 

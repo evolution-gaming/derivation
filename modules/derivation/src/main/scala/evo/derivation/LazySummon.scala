@@ -38,7 +38,7 @@ object LazySummon:
 
     inline def all[Names <: Tuple, From, TC[_], Fields <: Tuple]: All[TC, Fields] =
         type Summons = Tuple.Map[Tuple.Zip[Names, Fields], [A] =>> Applied[TC, From, A]]
-        summonAll[Summons].toIArray.asInstanceOf[IArray[Of[TC]]]
+        summonAll[Summons].toIArray.map(_.asInstanceOf[Of[TC]])
 
     extension [TC[_], Fields <: Tuple](all: All[TC, Fields])
         def useOn[Src[_], Res[_]](fields: Tuple.Map[Fields, Src])(
@@ -90,4 +90,4 @@ object LazySummon:
         inline def toMap[A](names: IArray[String]): Map[String, TC[A]] =
             inline erasedValue[Tuple.Union[Fields]] match
                 case _: A =>
-                    ???
+                    names.zip(all).asInstanceOf[IArray[(String, TC[A])]].toMap
