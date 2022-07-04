@@ -37,6 +37,13 @@ case class Config[+T](
     inline def constructorNames[S](using p: Mirror.SumOf[S]): IArray[String] =
         constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]].map(name)
 
+    lazy val down: Map[String, Config[T]] =
+        constructors.map((name, prod) => prod.renamed.getOrElse(constructorRenaming(name)) -> Config(top = prod))
+
+    def constructor(name: String): Config[Any] = down.getOrElse(name, Config.default) 
+
+    def as[T]: Config[T] = asInstanceOf[Config[T]]
+
 end Config
 
 object Config:
