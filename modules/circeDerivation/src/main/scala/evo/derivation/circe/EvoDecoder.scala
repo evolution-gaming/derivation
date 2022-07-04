@@ -17,6 +17,7 @@ import evo.derivation.LazySummon
 import evo.derivation.LazySummon.LazySummonByConfig
 import java.util.Arrays
 import io.circe.ACursor
+import io.circe.Decoder.Result
 
 trait ConfiguredDecoder[A] extends Decoder[A]
 
@@ -56,21 +57,7 @@ object ConfiguredDecoder:
             LazySummon.all[mirror.MirroredElemLabels, A, Decoder, ConfiguredDecoder, mirror.MirroredElemTypes]
         val names          = constValueTuple[mirror.MirroredElemLabels].toIArray.toVector.asInstanceOf[Vector[String]]
 
-        val subDecoders = constInstances.toMap[A](names)
-        lazy val cfg    = config
-        lazy val all    = cfg.constrFromRenamed.keys.mkString(", ")
-        cur =>
-            for
-                subDown           <- constName(cur, cfg.discriminator)
-                (subRenamed, down) = subDown
-                subName           <- cfg.constrFromRenamed
-                                         .get(subRenamed)
-                                         .toFailure(s"constructor $subRenamed not found expected one of: $all")
-                sub               <- subDecoders
-                                         .get(subName)
-                                         .toFailure(s"Internal error: should not happend, could not found $subName constructor info")
-                result            <- sub.tryDecode(down)
-            yield result
+        SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
 
     class ProductDecoder[A](mirror: Mirror.ProductOf[A])(
         fieldInstances: LazySummon.All[Decoder, mirror.MirroredElemTypes],
@@ -86,7 +73,6 @@ object ConfiguredDecoder:
                 decoder.use(cursor.as[decoder.FieldType])
 
             def apply(cur: HCursor): Decoder.Result[A] =
-                println(s"mirror $mirror config $config")
                 fieldInstances.useEitherFast(infos)(onField(cur)) match
                     case Left(err)    => Left(err)
                     case Right(tuple) => Right(mirror.fromProduct(tuple))
@@ -96,3 +82,24 @@ object ConfiguredDecoder:
                     case Left(head +: rest) => Validated.Invalid(NonEmptyList(head, rest.toList))
                     case Left(_)            => Validated.invalidNel(DecodingFailure("unknown error", Nil))
                     case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
+
+    class SumDecoder[A](config: => Config[A], mirror: Mirror.SumOf[A])(
+        mkSubDecoders: => Map[String, Decoder[A]],
+        names: Vector[String],
+    ) extends ConfiguredDecoder[A]:
+
+        lazy val cfg                       = config
+        lazy val subDecoders               = mkSubDecoders
+        lazy val all                       = cfg.constrFromRenamed.keys.mkString(", ")
+        def apply(cur: HCursor): Result[A] =
+            for
+                subDown           <- constName(cur, cfg.discriminator)
+                (subRenamed, down) = subDown
+                subName           <- cfg.constrFromRenamed
+                                         .get(subRenamed)
+                                         .toFailure(s"constructor $subRenamed not found expected one of: $all")
+                sub               <- subDecoders
+                                         .get(subName)
+                                         .toFailure(s"Internal error: should not happend, could not found $subName constructor info")
+                result            <- sub.tryDecode(down)
+            yield result
