@@ -26,7 +26,7 @@ case class Config[+T](
             case SnakeCase()        => withRenaming(Config.snakeCase)
             case Discriminator(dis) => copy(discriminator = Some(dis))
             case Rename(newName)    => copy(top = top.applyRenaming(fieldName, newName))
-            case Embed() =>
+            case Embed()            =>
                 fieldName match
                     case None            => this
                     case Some(fieldName) => copy(top = top.embedField(fieldName))
@@ -37,10 +37,12 @@ case class Config[+T](
     inline def constructorNames[S](using p: Mirror.SumOf[S]): IArray[String] =
         constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]].map(name)
 
-    lazy val down: Map[String, Config[T]] =
-        constructors.map((name, prod) => prod.renamed.getOrElse(constructorRenaming(name)) -> Config(top = prod))
 
-    def constructor(name: String): Config[Any] = down.getOrElse(name, Config.default) 
+    lazy val constrFromRenamed: Map[String, String] =
+        constructors.map((name, prod) => prod.renamed.getOrElse(constructorRenaming(name)) -> name)
+
+    def constructor(name: String): Config[Any] =         
+        constructors.get(name).fold(Config.default)(p => Config(top = p))
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
 
@@ -54,6 +56,7 @@ object Config:
     val snakeCase: Renaming = _.split("(?<=\\p{Lower})(?=\\p{Upper})").nn.mkString("_").nn.toLowerCase.nn
 
     case class ForProduct(
+        fields: Vector[String] = Vector(),
         renamed: Option[String] = None,
         fieldNames: Map[String, String] = Map.empty,
         embedFields: Set[String] = Set.empty,
@@ -67,16 +70,11 @@ object Config:
 
         def name(field: String) = fieldNames.getOrElse(field, fieldRenaming(field))
 
-        private inline def productFields[P](using p: Mirror.ProductOf[P]): IArray[String] =
-            constValueTuple[p.MirroredElemLabels].toIArray.map(_.asInstanceOf[String])
-
         def fieldInfo(field: String): FieldInfo = FieldInfo(name = name(field), embed = embedFields(field))
 
-        inline def names[P: Mirror.ProductOf]: IArray[String] = productFields[P].map(name)
+        def embedded: Vector[Boolean] = fields.map(embedFields)
 
-        inline def embedded[P: Mirror.ProductOf]: IArray[Boolean] = productFields[P].map(embedFields)
-
-        inline def fieldInfos[P: Mirror.ProductOf]: IArray[FieldInfo] = productFields[P].map(fieldInfo)
+        def fieldInfos: Vector[FieldInfo] = fields.map(fieldInfo)
 
     end ForProduct
 
@@ -86,7 +84,10 @@ object Config:
         fromAllAnnots(readAnnotations[T])
 
     private def fromAnnots(annotations: Annotations): Config[Nothing] =
-        val topApplied = annotations.forType.foldLeft(default)(_.applyAnnotation(_))
+        val start      =
+            if annotations.fields.isEmpty then default
+            else Config(top = ForProduct(fields = annotations.fields))
+        val topApplied = annotations.forType.foldLeft(start)(_.applyAnnotation(_))
 
         annotations.byField.foldLeft(topApplied) { case (prev, (name, annotations)) =>
             annotations.foldLeft(prev) { _.applyAnnotation(_, Some(name)) }
@@ -106,6 +107,7 @@ object Config:
     private case class Annotations(
         forType: Vector[DA],
         byField: Map[String, Vector[DA]],
+        fields: Vector[String],
     )
 
     private case class AllAnnotations(
@@ -132,25 +134,27 @@ object Config:
 
         private def fieldAnnotations(s: Symbol): Expr[(String, Vector[DA])] =
             val annots = Varargs(s.annotations.flatMap(annotationTree))
-            val name = Expr(s.name)
+            val name   = Expr(s.name)
 
             '{ $name -> Vector($annots: _*) }
 
         private def topAnnotations(sym: Symbol): Expr[Annotations] =
-            val topAnns = Varargs(sym.annotations.flatMap(annotationTree))
+            val topAnns    = Varargs(sym.annotations.flatMap(annotationTree))
             val caseParams = sym.primaryConstructor.paramSymss.take(1).flatten
-            val fieldAnns = Varargs(caseParams.map(fieldAnnotations))
+            val fields     = Varargs(caseParams.map(sym => Expr(sym.name)))
+            val fieldAnns  = Varargs(caseParams.map(fieldAnnotations))
 
             '{
                 Annotations(
                   forType = Vector($topAnns: _*),
                   byField = Map($fieldAnns: _*),
+                  fields = Vector($fields: _*),
                 )
             }
         end topAnnotations
 
         private def subtypeAnnotation(sym: Symbol): Expr[(String, Annotations)] =
-            val name = Expr(sym.name)
+            val name   = Expr(sym.name)
             val annots = topAnnotations(sym)
 
             '{ ($name, $annots) }

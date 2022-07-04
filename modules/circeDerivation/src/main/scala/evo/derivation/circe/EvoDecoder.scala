@@ -16,6 +16,7 @@ import scala.collection.immutable.Iterable
 import evo.derivation.LazySummon
 import evo.derivation.LazySummon.LazySummonByConfig
 import java.util.Arrays
+import io.circe.ACursor
 
 trait ConfiguredDecoder[A] extends Decoder[A]
 
@@ -28,49 +29,70 @@ object ConfiguredDecoder:
             case _                         => underiveableError[ConfiguredDecoder[A], A]
         }
 
-    private inline given deriveForProduct[A](using
+    inline def deriveForProduct[A](using
         mirror: Mirror.ProductOf[A],
     ): LazySummonByConfig[ConfiguredDecoder, A] =
-        val fieldInstances = LazySummon.all[mirror.MirroredElemLabels, A, Decoder, mirror.MirroredElemTypes]
-        new:
-            def instance(using config: => Config[A]) = new:
-
-                lazy val infos = config.top.fieldInfos
-
-                private def onField(
-                    cur: HCursor,
-                )(decoder: LazySummon.Of[Decoder], info: FieldInfo): Decoder.Result[decoder.FieldType] =
-                    val cursor = if info.embed then cur else cur.downField(info.name)
-                    decoder.use(cursor.as[decoder.FieldType])
-
-                def apply(cur: HCursor): Decoder.Result[A] =
-                    fieldInstances.useEitherFast(infos)(onField(cur)) match
-                        case Left(err)    => Left(err)
-                        case Right(tuple) => Right(mirror.fromProduct(tuple))
-
-                override def decodeAccumulating(cur: HCursor): Decoder.AccumulatingResult[A] =
-                    fieldInstances.useEithers(infos)(onField(cur)) match
-                        case Left(head +: rest) => Validated.Invalid(NonEmptyList(head, rest.toList))
-                        case Left(_)            => Validated.invalidNel(DecodingFailure("unknown error", Nil))
-                        case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
+        val fieldInstances =
+            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, ConfiguredDecoder, mirror.MirroredElemTypes]
+        ProductDecoder[A](mirror)(fieldInstances)
 
     end deriveForProduct
 
     extension [A](oa: Option[A]) def toFailure(s: => String): Decoder.Result[A] = oa.toRight(DecodingFailure(s, Nil))
 
-    private def constName(cur: HCursor, discriminator: Option[String]): Decoder.Result[String] =
-        cur.keys.collect { case it if it.size == 1 => it.head }.toFailure("expecting an object with a single key")
+    private def constName(cur: HCursor, discriminator: Option[String]): Decoder.Result[(String, ACursor)] =
+        discriminator match
+            case Some(field) => for (sub <- cur.get[String](field)) yield (sub, cur)
+            case None        =>
+                for sub <- cur.keys
+                               .collect { case it if it.size == 1 => it.head }
+                               .toFailure("expecting an object with a single key")
+                yield (sub, cur.downField(sub))
+
+    inline given [A: Mirror.ProductOf]: LazySummonByConfig[ConfiguredDecoder, A] = deriveForProduct[A]
 
     private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): ConfiguredDecoder[A] =
-        val constInstances = LazySummon.all[mirror.MirroredElemLabels, A, Decoder, mirror.MirroredElemTypes]
-        val names = constValueTuple[mirror.MirroredElemLabels].toIArray.map(_.asInstanceOf[String])
+        val constInstances =
+            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, ConfiguredDecoder, mirror.MirroredElemTypes]
+        val names          = constValueTuple[mirror.MirroredElemLabels].toIArray.toVector.asInstanceOf[Vector[String]]
 
         val subDecoders = constInstances.toMap[A](names)
-        lazy val cfg = config
-        lazy val all = cfg.down.keys.mkString(", ")
+        lazy val cfg    = config
+        lazy val all    = cfg.constrFromRenamed.keys.mkString(", ")
         cur =>
             for
-                name <- constName(cur, cfg.discriminator)
-                sub <- subDecoders.get(name).toFailure(s"constructor $name not found expected one of: $all")
-                result <- sub.tryDecode(cur)
+                subDown           <- constName(cur, cfg.discriminator)
+                (subRenamed, down) = subDown
+                subName           <- cfg.constrFromRenamed
+                                         .get(subRenamed)
+                                         .toFailure(s"constructor $subRenamed not found expected one of: $all")
+                sub               <- subDecoders
+                                         .get(subName)
+                                         .toFailure(s"Internal error: should not happend, could not found $subName constructor info")
+                result            <- sub.tryDecode(down)
             yield result
+
+    class ProductDecoder[A](mirror: Mirror.ProductOf[A])(
+        fieldInstances: LazySummon.All[Decoder, mirror.MirroredElemTypes],
+    ) extends LazySummonByConfig[ConfiguredDecoder, A]:
+        def instance(using config: => Config[A]) = new:
+
+            lazy val infos = config.top.fieldInfos
+
+            private def onField(
+                cur: HCursor,
+            )(decoder: LazySummon.Of[Decoder], info: FieldInfo): Decoder.Result[decoder.FieldType] =
+                val cursor = if info.embed then cur else cur.downField(info.name)
+                decoder.use(cursor.as[decoder.FieldType])
+
+            def apply(cur: HCursor): Decoder.Result[A] =
+                println(s"mirror $mirror config $config")
+                fieldInstances.useEitherFast(infos)(onField(cur)) match
+                    case Left(err)    => Left(err)
+                    case Right(tuple) => Right(mirror.fromProduct(tuple))
+
+            override def decodeAccumulating(cur: HCursor): Decoder.AccumulatingResult[A] =
+                fieldInstances.useEithers(infos)(onField(cur)) match
+                    case Left(head +: rest) => Validated.Invalid(NonEmptyList(head, rest.toList))
+                    case Left(_)            => Validated.invalidNel(DecodingFailure("unknown error", Nil))
+                    case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
