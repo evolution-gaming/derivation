@@ -7,7 +7,7 @@ class AnnotationsTest extends munit.FunSuite {
     test("isbuzhka") {
         val cfg = summon[Config[Izbushka]]
         assertEquals(cfg.top.fieldRenaming, Config.snakeCase)
-        assertEquals(cfg.top.fieldNames, Map("pupa" -> "lupa"))
+        assertEquals(cfg.top.fieldNames, Map("ping" -> "pong"))
         assertEquals(cfg.top.embedFields, Set("azaza"))
     }
 
@@ -23,15 +23,17 @@ class AnnotationsTest extends munit.FunSuite {
 object AnnotationTest {
     @SnakeCase
     case class Izbushka(
-        @Rename("lupa") pupa: String,
-        @Embed azaza: Double,
+        @Rename("pong") ping: String,
+        @Embed azaza: Double = 0,
     ) derives Config
+
+
 
     @SnakeCase
     enum Baba derives Config:
         @Rename("Jaga")
         case Yaga
         @SnakeCase
-        case Kostyanaya(lolJe: String, kekJi: Double)
+        case Kostyanaya(lolJe: String = "", kekJi: Double = 0)
         case Noga(@Embed cheburek: Izbushka)
 }

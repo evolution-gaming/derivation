@@ -1,27 +1,30 @@
 package evo.derivation.circe
 
-import scala.compiletime.testing.typeCheckErrors
-import scala.compiletime.testing.Error
-
 import evo.derivation.Config
-import munit.FunSuite
-import EvoDecoderChecks.Hmm
-
-import EvoDecoderChecks.{HmmTName, ImplicitTName}
+import evo.derivation.Discriminator
+import evo.derivation.Embed
+import evo.derivation.LazySummon.LazySummonByConfig
+import evo.derivation.Rename
+import evo.derivation.SnakeCase
+import evo.derivation.circe.CheckData.Dictionary
+import evo.derivation.circe.CheckData.Document
+import evo.derivation.circe.CheckData.Mode
+import evo.derivation.circe.CheckData.Person
+import evo.derivation.circe.CheckData.User
+import evo.derivation.circe.CheckData.*
+import io.circe.Decoder
 import io.circe.parser.*
-import evo.derivation.circe.EvoDecoderChecks.Person
-import evo.derivation.{Rename, SnakeCase, Embed, Discriminator}
-import evo.derivation.circe.EvoDecoderChecks.Document
+import munit.FunSuite
+
 import java.time.Instant
+import java.time.LocalDateTime
 import java.util.UUID
 import scala.CanEqual.derived
-import java.time.LocalDateTime
-import evo.derivation.LazySummon.LazySummonByConfig
-import io.circe.Decoder
-import evo.derivation.circe.EvoDecoderChecks.User
-import evo.derivation.circe.EvoDecoderChecks.Mode
-import evo.derivation.circe.EvoDecoderChecks.Dictionary
-import evo.derivation.circe.EvoDecoderChecks.BinTree
+import scala.compiletime.testing.Error
+import scala.compiletime.testing.typeCheckErrors
+
+import CheckData.Hmm
+import CheckData.{HmmTName, ImplicitTName}
 
 class EvoDecoderChecks extends FunSuite:
     test("Hmm is not deriveable") {
@@ -32,8 +35,8 @@ class EvoDecoderChecks extends FunSuite:
     }
 
     test("plain product") {
-        val json = """{"name": "ololo", "age": 11}"""
-        assertEquals(decode[Person](json), Right(Person(name = "ololo", age = 11)))
+        val json =
+            assertEquals(decode[Person](personJson), Right(Person(name = "ololo", age = 11)))
     }
 
     test("complex product") {
@@ -121,7 +124,7 @@ class EvoDecoderChecks extends FunSuite:
         )
     }
 
-object EvoDecoderChecks:
+object CheckData:
     val Package       = "evo.derivation.circe"
     val DecoderTName  = s"$Package.ConfiguredDecoder"
     val HmmTName      = s"$Package.EvoDecoderChecks.Hmm"
@@ -129,6 +132,10 @@ object EvoDecoderChecks:
     class Hmm derives Config
 
     case class Person(name: String, age: Int) derives Config, ConfiguredDecoder
+
+    val person = Person(name = "ololo", age = 11)
+
+    val personJson = """{"name": "ololo", "age": 11}"""
 
     @SnakeCase case class Document(
         @Rename("documentId") id: UUID,

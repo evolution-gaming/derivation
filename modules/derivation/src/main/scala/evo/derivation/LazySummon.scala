@@ -3,6 +3,8 @@ package evo.derivation
 import scala.annotation.implicitNotFound
 import scala.compiletime.{summonAll, uninitialized, erasedValue}
 import evo.derivation.Config
+import scala.reflect.ClassTag.apply
+import scala.reflect.ClassTag
 
 @implicitNotFound(
   "can't find given instance of ${TC} for ${A} that's required for field or constructor ${Name} of type ${From}",
@@ -52,8 +54,16 @@ object LazySummon:
 
             Tuple.fromIArray(elements).asInstanceOf[Tuple.Map[Fields, Res]]
 
-        def useOnPlain[Res[_]](fields: Fields)(f: [A] => (TC[A], A) => Res[A]): Tuple.Map[Fields, Res] =
-            useOn[[a] =>> a, Res](fields.asInstanceOf[Tuple.Map[Fields, [a] =>> a]])(f)
+        def useCollect[Res: ClassTag, Info](fields: Fields, infos: Vector[Info])(
+            f: [A] => (Info, A, TC[A]) => Res,
+        ): Vector[Res] =
+            fields.toArray
+                .lazyZip(all)
+                .lazyZip(infos)
+                .map[Res, Array[Res]] { (field, inst, info) =>
+                    f(info, field.asInstanceOf[inst.FieldType], inst.tc)
+                }
+                .toVector
 
         def useEitherFast[Info, E](infos: Vector[Info])(
             f: (summon: Of[TC], info: Info) => Either[E, summon.FieldType],

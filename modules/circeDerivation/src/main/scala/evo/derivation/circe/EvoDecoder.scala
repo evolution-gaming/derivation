@@ -18,6 +18,7 @@ import evo.derivation.LazySummon.LazySummonByConfig
 import java.util.Arrays
 import io.circe.ACursor
 import io.circe.Decoder.Result
+import evo.derivation.internal.mirroredNames
 
 trait ConfiguredDecoder[A] extends Decoder[A]
 
@@ -55,7 +56,7 @@ object ConfiguredDecoder:
     private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): ConfiguredDecoder[A] =
         val constInstances =
             LazySummon.all[mirror.MirroredElemLabels, A, Decoder, ConfiguredDecoder, mirror.MirroredElemTypes]
-        val names          = constValueTuple[mirror.MirroredElemLabels].toIArray.toVector.asInstanceOf[Vector[String]]
+        val names          = mirroredNames[A]
 
         SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
 

@@ -33,10 +33,7 @@ case class Config[+T](
 
     def name(constructor: String): String =
         constructors.get(constructor).flatMap(_.renamed).getOrElse(constructorRenaming(constructor))
-
-    inline def constructorNames[S](using p: Mirror.SumOf[S]): IArray[String] =
-        constValueTuple[p.MirroredElemLabels].toIArray.asInstanceOf[IArray[String]].map(name)
-
+        
 
     lazy val constrFromRenamed: Map[String, String] =
         constructors.map((name, prod) => prod.renamed.getOrElse(constructorRenaming(name)) -> name)
