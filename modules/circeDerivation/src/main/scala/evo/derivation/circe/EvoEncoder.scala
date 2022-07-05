@@ -87,7 +87,7 @@ object ConfiguredEncoder:
 
             cfg.discriminator.zip(json.asObject) match
                 case Some(field -> obj) =>
-                    obj.add(field, Json.fromString(discrimValue))
+                    (field -> Json.fromString(discrimValue)) +: obj
                 case None               =>
                     JsonObject.singleton(discrimValue, json)
 
