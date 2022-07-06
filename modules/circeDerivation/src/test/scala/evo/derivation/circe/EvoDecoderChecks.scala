@@ -44,7 +44,7 @@ class EvoDecoderChecks extends FunSuite:
     }
 
     test("plain coproduct") {
-        assertEquals(decode[User](authorizedJson), Right(User.Authorized("ololo")))
+        assertEquals(decode[User](authorizedJson), Right(authorized))
 
         assertEquals(decode[User](anonymousJson), Right(User.Anonymous))
     }
@@ -68,6 +68,30 @@ class EvoEncoderChecks extends FunSuite:
         assertEquals(parse(personJson), Right(person.asJson))
     }
 
+    test("complex coproduct") {
+        assertEquals(parse(documentJson), Right(document.asJson))
+    }
+
+    test("plain coproduct") {
+        assertEquals(parse(authorizedJson), Right(authorized.asJson))
+
+        assertEquals(parse(anonymousJson), Right(User.Anonymous.asJson))
+    }
+
+    test("complex coproduct") {
+        assertEquals(parse(readJson), Right(read.asJson))
+
+        assertEquals(parse(writeJson), Right(write.asJson))
+    }
+
+    test("recursive product") {
+        assertEquals(parse(dictionaryJson), Right(dictionary.asJson.deepDropNullValues))
+    }
+
+    test("recursive coproduct") {
+        assertEquals(parse(binTreeJson), Right(binTree.asJson))
+    }
+
 object CheckData:
     val Package       = "evo.derivation.circe"
     val DecoderTName  = s"$Package.ConfiguredDecoder"
@@ -75,7 +99,7 @@ object CheckData:
     val ImplicitTName = s"$DecoderTName[$HmmTName]"
     class Hmm derives Config
 
-    case class Person(name: String, age: Int) derives Config, ConfiguredDecoder, ConfiguredEncoder
+    case class Person(name: String, age: Int) derives Config, EvoDecoder, EvoEncoder
 
     val person = Person(name = "ololo", age = 11)
 
@@ -86,7 +110,8 @@ object CheckData:
         issueDate: Instant,
         @Embed author: Person,
     ) derives Config,
-          ConfiguredDecoder
+          EvoDecoder,
+          EvoEncoder
 
     val uuid = UUID.fromString("68ede874-fb8a-11ec-a827-00155d6320ce").nn
     val date = Instant.now.nn
@@ -95,16 +120,18 @@ object CheckData:
 
     val documentJson = s"""{"documentId": "$uuid", "issue_date": "$date", "name": "alala", "age": 74}"""
 
-    enum User derives Config, ConfiguredDecoder:
+    enum User derives Config, EvoDecoder, EvoEncoder:
         case Authorized(login: String)
         case Anonymous
+
+    val authorized = User.Authorized("ololo")
 
     val authorizedJson = s"""{"Authorized" : {"login": "ololo"}}"""
 
     val anonymousJson = s"""{"Anonymous" : {}}"""
 
     @Discriminator("mode")
-    enum Mode derives Config, ConfiguredDecoder:
+    enum Mode derives Config, EvoDecoder, EvoEncoder:
         @Rename("r") case Read(@Rename("b") bin: Boolean)
         @Rename("w") case Write(append: Boolean = false, bin: Boolean)
 
@@ -116,14 +143,17 @@ object CheckData:
 
     val writeJson = s"""{"mode" : "w", "append":true, "bin": true}"""
 
-    case class Dictionary(key: String, value: String, next: Option[Dictionary]) derives Config, ConfiguredDecoder
+    case class Dictionary(key: String, value: String, next: Option[Dictionary])
+        derives Config,
+          EvoDecoder,
+          EvoEncoder
 
     val dictionaryJson = """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban"}}"""
 
     val dictionary = Dictionary("a", "arbuz", Some(Dictionary("b", "baraban", None)))
 
     @Discriminator("kind") @SnakeCase
-    enum BinTree derives Config, ConfiguredDecoder:
+    enum BinTree derives Config, EvoDecoder, EvoEncoder:
         case Branch(value: Int, left: BinTree, right: BinTree)
         case Nil
 

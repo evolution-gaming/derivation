@@ -20,22 +20,22 @@ import io.circe.ACursor
 import io.circe.Decoder.Result
 import evo.derivation.internal.mirroredNames
 
-trait ConfiguredDecoder[A] extends Decoder[A]
+trait EvoDecoder[A] extends Decoder[A]
 
-object ConfiguredDecoder:
+object EvoDecoder:
 
-    inline def derived[A](using config: => Config[A]): ConfiguredDecoder[A] =
+    inline def derived[A](using config: => Config[A]): EvoDecoder[A] =
         summonFrom {
             case given Mirror.ProductOf[A] => deriveForProduct[A].instance
             case given Mirror.SumOf[A]     => deriveForSum[A]
-            case _                         => underiveableError[ConfiguredDecoder[A], A]
+            case _                         => underiveableError[EvoDecoder[A], A]
         }
 
     inline def deriveForProduct[A](using
         mirror: Mirror.ProductOf[A],
-    ): LazySummonByConfig[ConfiguredDecoder, A] =
+    ): LazySummonByConfig[EvoDecoder, A] =
         val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, ConfiguredDecoder, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, EvoDecoder, mirror.MirroredElemTypes]
         ProductDecoder[A](mirror)(fieldInstances)
 
     end deriveForProduct
@@ -51,18 +51,18 @@ object ConfiguredDecoder:
                                .toFailure("expecting an object with a single key")
                 yield (sub, cur.downField(sub))
 
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[ConfiguredDecoder, A] = deriveForProduct[A]
+    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoDecoder, A] = deriveForProduct[A]
 
-    private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): ConfiguredDecoder[A] =
+    private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): EvoDecoder[A] =
         val constInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, ConfiguredDecoder, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, EvoDecoder, mirror.MirroredElemTypes]
         val names          = mirroredNames[A]
 
         SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
 
     class ProductDecoder[A](mirror: Mirror.ProductOf[A])(
         fieldInstances: LazySummon.All[Decoder, mirror.MirroredElemTypes],
-    ) extends LazySummonByConfig[ConfiguredDecoder, A]:
+    ) extends LazySummonByConfig[EvoDecoder, A]:
         def instance(using config: => Config[A]) = new:
 
             lazy val infos = config.top.fieldInfos
@@ -87,7 +87,7 @@ object ConfiguredDecoder:
     class SumDecoder[A](config: => Config[A], mirror: Mirror.SumOf[A])(
         mkSubDecoders: => Map[String, Decoder[A]],
         names: Vector[String],
-    ) extends ConfiguredDecoder[A]:
+    ) extends EvoDecoder[A]:
 
         lazy val cfg                       = config
         lazy val subDecoders               = mkSubDecoders
