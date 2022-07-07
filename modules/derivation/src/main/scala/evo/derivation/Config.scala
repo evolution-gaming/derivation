@@ -92,9 +92,7 @@ object Config:
     private def fromAllAnnots(annotations: AllAnnotations): Config[Nothing] =
         val byConstructor = default.copy(constructors = annotations.subtypes.view.mapValues(fromAnnots(_).top).toMap)
 
-        val res = fromAnnots(annotations.top, initial = byConstructor)
-        println(res)
-        res
+        fromAnnots(annotations.top, initial = byConstructor)
 
     private type DA = DerivationAnnotation
 
