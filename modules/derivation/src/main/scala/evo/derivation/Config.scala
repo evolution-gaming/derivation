@@ -33,12 +33,11 @@ case class Config[+T](
 
     def name(constructor: String): String =
         constructors.get(constructor).flatMap(_.renamed).getOrElse(constructorRenaming(constructor))
-        
 
     lazy val constrFromRenamed: Map[String, String] =
         constructors.map((name, prod) => prod.renamed.getOrElse(constructorRenaming(name)) -> name)
 
-    def constructor(name: String): Config[Any] =         
+    def constructor(name: String): Config[Any] =
         constructors.get(name).fold(Config.default)(p => Config(top = p))
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
@@ -80,10 +79,10 @@ object Config:
     inline def derived[T]: Config[T] =
         fromAllAnnots(readAnnotations[T])
 
-    private def fromAnnots(annotations: Annotations): Config[Nothing] =
+    private def fromAnnots(annotations: Annotations, initial: Config[Nothing] = default): Config[Nothing] =
         val start      =
-            if annotations.fields.isEmpty then default
-            else Config(top = ForProduct(fields = annotations.fields))
+            if annotations.fields.isEmpty then initial
+            else initial.copy(top = ForProduct(fields = annotations.fields))
         val topApplied = annotations.forType.foldLeft(start)(_.applyAnnotation(_))
 
         annotations.byField.foldLeft(topApplied) { case (prev, (name, annotations)) =>
@@ -91,11 +90,11 @@ object Config:
         }
 
     private def fromAllAnnots(annotations: AllAnnotations): Config[Nothing] =
-        val config = fromAnnots(annotations.top)
+        val byConstructor = default.copy(constructors = annotations.subtypes.view.mapValues(fromAnnots(_).top).toMap)
 
-        val byConstructor = annotations.subtypes.view.mapValues(fromAnnots(_).top).toMap
-
-        config.copy(constructors = byConstructor)
+        val res = fromAnnots(annotations.top, initial = byConstructor)
+        println(res)
+        res
 
     private type DA = DerivationAnnotation
 
