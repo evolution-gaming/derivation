@@ -31,7 +31,7 @@ class EvoDecoderChecks extends FunSuite:
     test("Hmm is not deriveable") {
         assertEquals(
           List(s"could not derive $ImplicitTName, look's like $HmmTName is neither case class or enum"),
-          typeCheckErrors("ConfiguredDecoder.derived[Hmm]").map(_.message),
+          typeCheckErrors("EvoDecoder.derived[Hmm]").map(_.message),
         )
     }
 
@@ -68,7 +68,7 @@ class EvoEncoderChecks extends FunSuite:
         assertEquals(parse(personJson), Right(person.asJson))
     }
 
-    test("complex coproduct") {
+    test("complex product") {
         assertEquals(parse(documentJson), Right(document.asJson))
     }
 
@@ -94,7 +94,7 @@ class EvoEncoderChecks extends FunSuite:
 
 object CheckData:
     val Package       = "evo.derivation.circe"
-    val DecoderTName  = s"$Package.ConfiguredDecoder"
+    val DecoderTName  = s"$Package.EvoDecoder"
     val HmmTName      = s"$Package.CheckData.Hmm"
     val ImplicitTName = s"$DecoderTName[$HmmTName]"
     class Hmm derives Config

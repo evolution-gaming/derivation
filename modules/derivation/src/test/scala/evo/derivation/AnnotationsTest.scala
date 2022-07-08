@@ -3,7 +3,7 @@ package evo.derivation
 import AnnotationTest.Izbushka
 import evo.derivation.AnnotationTest.Baba
 
-class AnnotationsTest extends munit.FunSuite {
+class AnnotationsTest extends munit.FunSuite:
     test("isbuzhka") {
         val cfg = summon[Config[Izbushka]]
         assertEquals(cfg.top.fieldRenaming, Config.snakeCase)
@@ -18,21 +18,16 @@ class AnnotationsTest extends munit.FunSuite {
         assertEquals(cfg.constructors("Noga").fieldRenaming("AbCd"), "ab_cd")
         assertEquals(cfg.constructors("Kostyanaya").fieldRenaming("AbCd"), "ab_cd")
     }
-}
 
-object AnnotationTest {
+object AnnotationTest:
     @SnakeCase
     case class Izbushka(
         @Rename("pong") ping: String,
         @Embed azaza: Double = 0,
     ) derives Config
 
-
-
     @SnakeCase
     enum Baba derives Config:
-        @Rename("Jaga")
-        case Yaga
+        @Rename("Jaga") case Yaga
         case Kostyanaya(lolJe: String = "", kekJi: Double = 0)
         case Noga(@Embed cheburek: Izbushka)
-}
