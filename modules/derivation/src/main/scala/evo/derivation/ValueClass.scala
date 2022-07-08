@@ -74,9 +74,7 @@ private class ValueClassMacro[A: Type](using q: Quotes):
 
         val ref = Select(Ident(TermRef(prefix, aType.name)), apply)
 
-        val xxx = Apply(ref, List(repr.asTerm)).asExpr.asExprOf[A]
-
-        xxx
+        Apply(ref, List(repr.asTerm)).asExpr.asExprOf[A]
 
     private def toExpr[Repr: Type](value: Expr[A]): Expr[Repr] =
         val term = value.asTerm
