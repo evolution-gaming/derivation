@@ -22,8 +22,6 @@ import evo.derivation.ValueClass
 
 trait EvoEncoder[A] extends Encoder[A]
 
-trait EvoObjectEncoder[A] extends EvoEncoder[A] with Encoder.AsObject[A]
-
 object EvoEncoder:
     inline def derived[A](using config: => Config[A]): EvoEncoder[A] =
         summonFrom {
@@ -35,7 +33,10 @@ object EvoEncoder:
 
     inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoEncoder, A] = deriveForProduct[A]
 
-    private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): EvoEncoder[A] =
+    private[circe] inline def deriveForSum[A](using
+        config: => Config[A],
+        mirror: Mirror.SumOf[A],
+    ): EvoObjectEncoder[A] =
         given Matching[A] = Matching.create[A]
 
         val fieldInstances =
@@ -45,9 +46,9 @@ object EvoEncoder:
 
         new SumEncoder[A](fieldInstances.toMap(names))
 
-    private inline def deriveForProduct[A](using
+    private[circe] inline def deriveForProduct[A](using
         mirror: Mirror.ProductOf[A],
-    ): LazySummonByConfig[EvoEncoder, A] =
+    ): LazySummonByConfig[EvoObjectEncoder, A] =
         val fieldInstances =
             LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoEncoder, mirror.MirroredElemTypes]
 
@@ -60,7 +61,7 @@ object EvoEncoder:
 
     class ProductEncoder[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
         fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
-    ) extends LazySummonByConfig[EvoEncoder, A]:
+    ) extends LazySummonByConfig[EvoObjectEncoder, A]:
 
         private def encodeField(info: FieldInfo, json: Json): Vector[(String, Json)] =
             json.asObject match
@@ -106,3 +107,23 @@ object EvoEncoder:
         def apply(a: A): Json = enc(nt.to(a))
 
 end EvoEncoder
+
+trait EvoObjectEncoder[A] extends EvoEncoder[A] with Encoder.AsObject[A]
+
+object EvoObjectEncoder:
+    inline def derived[A](using config: => Config[A]): EvoObjectEncoder[A] =
+        summonFrom {
+            case mirror: Mirror.ProductOf[A] => EvoEncoder.deriveForProduct[A].instance
+            case given Mirror.SumOf[A]       => EvoEncoder.deriveForSum[A]
+            case given ValueClass[A]         => deriveForNewtype[A]
+            case _                           => underiveableError[EvoEncoder[A], A]
+        }
+
+    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoObjectEncoder[A] =
+        given Encoder.AsObject[nt.Representation] = summonInline
+
+        NewtypeEncoder[A]()
+
+    class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation])
+        extends EvoObjectEncoder[A]:
+        def encodeObject(a: A): JsonObject = enc.encodeObject(nt.to(a))
