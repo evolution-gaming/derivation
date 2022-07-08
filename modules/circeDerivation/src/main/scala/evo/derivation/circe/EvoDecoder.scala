@@ -19,6 +19,7 @@ import java.util.Arrays
 import io.circe.ACursor
 import io.circe.Decoder.Result
 import evo.derivation.internal.mirroredNames
+import evo.derivation.ValueClass
 
 trait EvoDecoder[A] extends Decoder[A]
 
@@ -28,6 +29,7 @@ object EvoDecoder:
         summonFrom {
             case given Mirror.ProductOf[A] => deriveForProduct[A].instance
             case given Mirror.SumOf[A]     => deriveForSum[A]
+            case given ValueClass[A]       => deriveForNewtype[A]
             case _                         => underiveableError[EvoDecoder[A], A]
         }
 
@@ -40,7 +42,20 @@ object EvoDecoder:
 
     end deriveForProduct
 
-    extension [A](oa: Option[A]) def toFailure(s: => String): Decoder.Result[A] = oa.toRight(DecodingFailure(s, Nil))
+    private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): EvoDecoder[A] =
+        val constInstances =
+            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, EvoDecoder, mirror.MirroredElemTypes]
+        val names          = mirroredNames[A]
+
+        SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
+
+    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoDecoder[A] =
+        given Decoder[nt.Representation] = summonInline
+
+        NewtypeDecoder[A]()
+
+    extension [A](oa: Option[A])
+        private def toFailure(s: => String): Decoder.Result[A] = oa.toRight(DecodingFailure(s, Nil))
 
     private def constName(cur: HCursor, discriminator: Option[String]): Decoder.Result[(String, ACursor)] =
         discriminator match
@@ -52,13 +67,6 @@ object EvoDecoder:
                 yield (sub, cur.downField(sub))
 
     inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoDecoder, A] = deriveForProduct[A]
-
-    private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): EvoDecoder[A] =
-        val constInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, EvoDecoder, mirror.MirroredElemTypes]
-        val names          = mirroredNames[A]
-
-        SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
 
     class ProductDecoder[A](mirror: Mirror.ProductOf[A])(
         fieldInstances: LazySummon.All[Decoder, mirror.MirroredElemTypes],
@@ -104,3 +112,7 @@ object EvoDecoder:
                                          .toFailure(s"Internal error: should not happend, could not found $subName constructor info")
                 result            <- sub.tryDecode(down)
             yield result
+
+    class NewtypeDecoder[A](using nt: ValueClass[A])(using enc: Decoder[nt.Representation]) extends EvoDecoder[A]:
+        override def apply(c: HCursor): Result[A] = c.as[nt.Representation].map(nt.from)
+
