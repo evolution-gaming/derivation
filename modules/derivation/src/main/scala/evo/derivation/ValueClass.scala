@@ -57,32 +57,6 @@ private class ValueClassMacro[A: Type](using q: Quotes):
                     }
                 }
 
-    private def termRef(s: Symbol): TermRef =
-        try
-            val methods = q.reflect.SymbolMethods
-
-            val termRef = methods.getClass.getMethods.nn.collect {
-                case m if m.nn.getName.nn.contains("termRef") => m.nn
-            }.head
-
-            termRef.invoke(methods, s).asInstanceOf[TermRef]
-        catch
-            case _: Exception =>
-                report.errorAndAbort(s"Internal error: can't get reference of $s")
-
-    private def typeRef(s: Symbol): TypeRef =
-        try
-            val methods = q.reflect.SymbolMethods
-
-            val termRef = methods.getClass.getMethods.nn.collect {
-                case m if m.nn.getName.nn.contains("typeRef") => m.nn
-            }.head
-
-            termRef.invoke(methods, s).asInstanceOf[TypeRef]
-        catch
-            case _: Exception =>
-                report.errorAndAbort(s"Internal error: can't get reference of $s")
-
     private def fromExpr[Repr: Type](repr: Expr[Repr]): Expr[A] =
 
         val companion = aType.companionClass
