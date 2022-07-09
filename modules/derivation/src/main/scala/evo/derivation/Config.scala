@@ -27,10 +27,10 @@ case class Config[+T](
             case ct: CaseTransformation    =>
                 val transformation = Config.caseConfiguration(ct)
                 fieldName match
-                //for field: transform only this field
-                case Some(field) => copy(top =  top.applyRenaming(Some(field), transformation(field)))
-                //for class/enum: transform everything
-                case None => withRenaming(transformation)
+                    //for field: transform only this field
+                    case Some(field) => copy(top =  top.applyRenaming(Some(field), transformation(field)))
+                    //for class/enum: transform everything
+                    case None => withRenaming(transformation)
             case Discriminator(dis) => copy(discriminator = Some(dis))
             case Rename(newName)    => copy(top = top.applyRenaming(fieldName, newName))
             case Embed()            =>
