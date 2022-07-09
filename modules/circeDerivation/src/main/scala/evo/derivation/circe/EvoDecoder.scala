@@ -115,4 +115,3 @@ object EvoDecoder:
 
     class NewtypeDecoder[A](using nt: ValueClass[A])(using enc: Decoder[nt.Representation]) extends EvoDecoder[A]:
         override def apply(c: HCursor): Result[A] = c.as[nt.Representation].map(nt.from)
-

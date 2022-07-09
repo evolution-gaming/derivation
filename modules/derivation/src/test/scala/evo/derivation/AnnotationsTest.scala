@@ -1,6 +1,6 @@
 package evo.derivation
 
-import AnnotationTest.{Baba, Izbushka, Pech}
+import AnnotationTest.{Baba, Izbushka, Pech, Gosudarstvo}
 
 class AnnotationsTest extends munit.FunSuite:
     test("isbuzhka") {
@@ -18,12 +18,25 @@ class AnnotationsTest extends munit.FunSuite:
         assertEquals(cfg.constructors("Kostyanaya").fieldRenaming("AbCd"), "ab_cd")
     }
 
-    test("pech"){
+    test("pech") {
         val cfg = summon[Config[Pech]]
         assertEquals(cfg.constructorRenaming("Pech"), "Pech")
         assertEquals(cfg.top.transformedFields, Map("Ivan" -> "ivan"))
-        assertEquals(cfg.top.fieldRenaming("Fool"), "Fool")
+        assertEquals(cfg.top.fieldRenaming("Durak"), "Durak")
     }
+
+    test("gosudarstvo") {
+        val cfg = summon[Config[Gosudarstvo]]
+        assertEquals(
+          cfg.top.transformedFields,
+          Map(
+            "tridesatoyeGosudarstvo"  -> "TridesatoyeGosudarstvo",
+            "tridevyatoyeGosudarstvo" -> "tridevyatoye-gosudarstvo",
+          ),
+        )
+    }
+
+
 
 object AnnotationTest:
     @SnakeCase
@@ -40,5 +53,10 @@ object AnnotationTest:
 
     case class Pech(
         @SnakeCase Ivan: String,
-        quality: String
-                   ) derives Config
+        Durak: true,
+    ) derives Config
+
+    case class Gosudarstvo(
+        @PascalCase() tridesatoyeGosudarstvo: String,
+        @KebabCase() tridevyatoyeGosudarstvo: String,
+    ) derives Config

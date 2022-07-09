@@ -24,16 +24,16 @@ case class Config[+T](
 
     def applyAnnotation(annotation: DerivationAnnotation, fieldName: Option[String] = None): Config[T] =
         annotation match
-            case ct: CaseTransformation    =>
+            case ct: CaseTransformation =>
                 val transformation = Config.caseConfiguration(ct)
                 fieldName match
-                    //for field: transform only this field
-                    case Some(field) => copy(top =  top.applyRenaming(Some(field), transformation(field)))
-                    //for class/enum: transform everything
-                    case None => withRenaming(transformation)
-            case Discriminator(dis) => copy(discriminator = Some(dis))
-            case Rename(newName)    => copy(top = top.applyRenaming(fieldName, newName))
-            case Embed()            =>
+                    // for field: transform only this field
+                    case Some(field) => copy(top = top.applyRenaming(Some(field), transformation(field)))
+                    // for class/enum: transform everything
+                    case None        => withRenaming(transformation)
+            case Discriminator(dis)     => copy(discriminator = Some(dis))
+            case Rename(newName)        => copy(top = top.applyRenaming(fieldName, newName))
+            case Embed()                =>
                 fieldName match
                     case None            => this
                     case Some(fieldName) => copy(top = top.embedField(fieldName))
@@ -56,25 +56,28 @@ object Config:
 
     val default: Config[Nothing] = Config()
 
-    private val extractWords = (input: String) => input.split("(?<=\\p{Lower})(?=\\p{Upper})")
+    private val extractWords = (name: String) => name.split("(?<=\\p{Lower})(?=\\p{Upper})")
 
     val snakeCase: Renaming = extractWords(_).nn.mkString("_").nn.toLowerCase.nn
 
     val kebabCase: Renaming = extractWords(_).nn.mkString("-").nn.toLowerCase.nn
 
+    val pascalCase: Renaming = name => s"${name.head.toUpper}${name.drop(1)}"
+
     inline def caseConfiguration(ct: CaseTransformation): Renaming = ct match
-        case SnakeCase() => snakeCase
-        case KebabCase() => kebabCase
+        case SnakeCase()  => snakeCase
+        case KebabCase()  => kebabCase
+        case PascalCase() => pascalCase
 
     case class ForProduct(
-                             fields: Vector[String] = Vector(),
-                             renamed: Option[String] = None,
-                             transformedFields: Map[String, String] = Map.empty,
-                             embedFields: Set[String] = Set.empty,
-                             fieldRenaming: Renaming = identity,
+        fields: Vector[String] = Vector(),
+        renamed: Option[String] = None,
+        transformedFields: Map[String, String] = Map.empty,
+        embedFields: Set[String] = Set.empty,
+        fieldRenaming: Renaming = identity,
     ):
         def applyRenaming(field: Option[String], newName: String): ForProduct = field match
-            case Some(oldName) => copy(transformedFields = transformedFields + (oldName -> newName) )
+            case Some(oldName) => copy(transformedFields = transformedFields + (oldName -> newName))
             case None          => copy(renamed = Some(newName))
 
         def embedField(field: String): ForProduct = copy(embedFields = embedFields + field)

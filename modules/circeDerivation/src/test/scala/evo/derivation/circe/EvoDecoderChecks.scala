@@ -97,9 +97,9 @@ class EvoEncoderChecks extends FunSuite:
 object CheckData:
     class TestClass derives Config
 
-    val Package       = "evo.derivation.circe"
-    val DecoderTypeName  = s"$Package.EvoDecoder"
-    val TestClassName      = s"$Package.CheckData.TestClass"
+    val Package                = "evo.derivation.circe"
+    val DecoderTypeName        = s"$Package.EvoDecoder"
+    val TestClassName          = s"$Package.CheckData.TestClass"
     val AppliedDecoderTypeName = s"$DecoderTypeName[$TestClassName]"
 
     case class Person(name: String, age: Int) derives Config, EvoDecoder, EvoEncoder
@@ -152,10 +152,7 @@ object CheckData:
 
     val writeJson = s"""{"mode" : "w", "append":true, "bin": true}"""
 
-    case class Dictionary(key: String, value: String, next: Option[Dictionary])
-        derives Config,
-          EvoDecoder,
-          EvoEncoder
+    case class Dictionary(key: String, value: String, next: Option[Dictionary]) derives Config, EvoDecoder, EvoEncoder
 
     val dictionaryJson = """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban"}}"""
 
