@@ -3,11 +3,22 @@ package evo.derivation
 import scala.annotation.StaticAnnotation
 
 sealed trait DerivationAnnotation extends StaticAnnotation
+sealed trait CaseTransformation extends DerivationAnnotation
 
-/** all fields and constructor names of this case class enum will be renamed to snake case form */
-case class SnakeCase() extends DerivationAnnotation
+/**  Transforms data to to snake_case_form
+ *
+ *   - If used on enum/value class/case class, it will change all field and constructor names
+ *   - If used directly on field it will change this field only
+ */
+case class SnakeCase() extends CaseTransformation
 
-/** this enum will use discriminator field with given name */
+/**  Transforms data to to kebab-case-form
+ *
+ *   - If used on enum/value class/case class, it will change all field and constructor names
+ *   - If used directly on field it will change this field only
+ */case class KebabCase() extends CaseTransformation
+
+/** This enum will use discriminator field with given name */
 case class Discriminator(name: String) extends DerivationAnnotation
 
 /** this field or this constructor will be renamed to `name` */

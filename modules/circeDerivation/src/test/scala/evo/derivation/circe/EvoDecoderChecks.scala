@@ -23,15 +23,15 @@ import scala.CanEqual.derived
 import scala.compiletime.testing.Error
 import scala.compiletime.testing.typeCheckErrors
 
-import CheckData.Hmm
+import CheckData.TestClass
 import CheckData._
 import io.circe.syntax.given
 
 class EvoDecoderChecks extends FunSuite:
-    test("Hmm is not deriveable") {
+    test("TestClass is not derivable because it is not a case class nor a enum") {
         assertEquals(
-          List(s"could not derive $ImplicitTName, look's like $HmmTName is neither case class or enum"),
-          typeCheckErrors("EvoDecoder.derived[Hmm]").map(_.message),
+          List(s"could not derive $AppliedDecoderTypeName, look's like $TestClassName is neither case class or enum"),
+          typeCheckErrors("EvoDecoder.derived[TestClass]").map(_.message),
         )
     }
 
@@ -45,6 +45,8 @@ class EvoDecoderChecks extends FunSuite:
 
     test("plain coproduct") {
         assertEquals(decode[User](authorizedJson), Right(authorized))
+
+        assertEquals(decode[User](adminJson), Right(admin))
 
         assertEquals(decode[User](anonymousJson), Right(User.Anonymous))
     }
@@ -93,11 +95,12 @@ class EvoEncoderChecks extends FunSuite:
     }
 
 object CheckData:
+    class TestClass derives Config
+
     val Package       = "evo.derivation.circe"
-    val DecoderTName  = s"$Package.EvoDecoder"
-    val HmmTName      = s"$Package.CheckData.Hmm"
-    val ImplicitTName = s"$DecoderTName[$HmmTName]"
-    class Hmm derives Config
+    val DecoderTypeName  = s"$Package.EvoDecoder"
+    val TestClassName      = s"$Package.CheckData.TestClass"
+    val AppliedDecoderTypeName = s"$DecoderTypeName[$TestClassName]"
 
     case class Person(name: String, age: Int) derives Config, EvoDecoder, EvoEncoder
 
@@ -105,7 +108,8 @@ object CheckData:
 
     val personJson = """{"name": "ololo", "age": 11}"""
 
-    @SnakeCase case class Document(
+    @SnakeCase
+    case class Document(
         @Rename("documentId") id: UUID,
         issueDate: Instant,
         @Embed author: Person,
@@ -123,10 +127,15 @@ object CheckData:
     enum User derives Config, EvoDecoder, EvoEncoder:
         case Authorized(login: String)
         case Anonymous
+        case Admin(login: String, @Rename("access") rights: String)
 
     val authorized = User.Authorized("ololo")
 
+    val admin = User.Admin("ololo", "kek")
+
     val authorizedJson = s"""{"Authorized" : {"login": "ololo"}}"""
+
+    val adminJson = s"""{"Admin" : {"login": "ololo", "access": "kek"}}"""
 
     val anonymousJson = s"""{"Anonymous" : {}}"""
 
@@ -158,11 +167,11 @@ object CheckData:
         case Nil
 
     val binTreeJson = """{
-            "kind" : "branch", 
-            "value": 1, 
+            "kind" : "branch",
+            "value": 1,
             "left": {
               "kind" : "nil"
-            }, 
+            },
             "right": {
               "kind" : "branch",
               "value" : 3,

@@ -29,7 +29,7 @@ object EvoDecoder:
         summonFrom {
             case given Mirror.ProductOf[A] => deriveForProduct[A].instance
             case given Mirror.SumOf[A]     => deriveForSum[A]
-            case given ValueClass[A]       => deriveForNewtype[A]
+            case given ValueClass[A]       => deriveForValueClass[A]
             case _                         => underiveableError[EvoDecoder[A], A]
         }
 
@@ -49,7 +49,7 @@ object EvoDecoder:
 
         SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
 
-    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoDecoder[A] =
+    private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoDecoder[A] =
         given Decoder[nt.Representation] = summonInline
 
         NewtypeDecoder[A]()
