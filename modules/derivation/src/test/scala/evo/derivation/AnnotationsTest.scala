@@ -36,8 +36,6 @@ class AnnotationsTest extends munit.FunSuite:
         )
     }
 
-
-
 object AnnotationTest:
     @SnakeCase
     case class Izbushka(
