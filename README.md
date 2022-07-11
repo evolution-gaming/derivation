@@ -1,4 +1,4 @@
-# Evo-Derivation
+# Derivation
 
 A derivation library for scala 3 with annotation based configuration
 
