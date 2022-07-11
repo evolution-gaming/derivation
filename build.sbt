@@ -30,9 +30,9 @@ lazy val derivation = project
 lazy val circeDerivation = project
     .in(modules / "circeDerivation")
     .settings(
-      name := "derivation-circe",
-      libraryDependencies += "io.circe" %% "circe-core" % Version.circe,
+      name                              := "derivation-circe",
+      libraryDependencies += "io.circe" %% "circe-core"   % Version.circe,
       libraryDependencies += "io.circe" %% "circe-parser" % Version.circe % Test,
-      defaultSettings
+      defaultSettings,
     )
     .dependsOn(derivation)

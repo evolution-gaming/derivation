@@ -4,10 +4,35 @@ import scala.annotation.StaticAnnotation
 
 sealed trait DerivationAnnotation extends StaticAnnotation
 
-/** all fields and constructor names of this case class enum will be renamed to snake case form */
-case class SnakeCase() extends DerivationAnnotation
+/** Case transformation
+  *
+  *   - if used on enum/value class/case class, it will change all field and constructor names;
+  *   - if used directly on field it will change this field only.
+  *
+  * @note
+  *   It's expected that original names are in camelCaseForm.
+  */
+sealed trait CaseTransformation extends DerivationAnnotation
 
-/** this enum will use discriminator field with given name */
+/** Transforms names to to snake_case_form
+  *
+  * @inheritdoc
+  */
+case class SnakeCase() extends CaseTransformation
+
+/** Transforms names to to kebab-case-form
+  *
+  * @inheritdoc
+  */
+case class KebabCase() extends CaseTransformation
+
+/** Transforms names to to PascalCaseForm
+  *
+  * @inheritdoc
+  */
+case class PascalCase() extends CaseTransformation
+
+/** This enum will use discriminator field with given name */
 case class Discriminator(name: String) extends DerivationAnnotation
 
 /** this field or this constructor will be renamed to `name` */

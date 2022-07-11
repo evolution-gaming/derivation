@@ -13,5 +13,5 @@ private def subtypeToIntersectionEq[A, B](using ev: A <:< B): A =:= (A & B) =
     given (A <:< (A & B)) = ev.liftCo[[x] =>> A & x]
     <:<.antisymm
 
-inline def mirroredNames[A](using mirror : Mirror.Of[A]): Vector[String] = 
+inline def mirroredNames[A](using mirror: Mirror.Of[A]): Vector[String] =
     constValueTuple[mirror.MirroredElemLabels].toIArray.toVector.asInstanceOf[Vector[String]]
