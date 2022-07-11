@@ -36,3 +36,12 @@ lazy val circeDerivation = project
       defaultSettings,
     )
     .dependsOn(derivation)
+
+lazy val tapirDerivation = project
+    .in(modules / "tapirDerivation")
+    .settings(
+      name                                                 := "derivation-tapir",
+      libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core"   % Version.tapir,
+      defaultSettings,
+    )
+    .dependsOn(derivation)
