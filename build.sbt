@@ -45,3 +45,13 @@ lazy val tapirDerivation = project
       defaultSettings,
     )
     .dependsOn(derivation)
+
+
+lazy val playJsonDerivation = project
+    .in(modules / "playJsonDerivation")
+    .settings(
+        name                                                 := "derivation-play-json",
+        libraryDependencies += "com.typesafe.play" %% "play-json" % Version.playJson cross CrossVersion.for3Use2_13,
+        defaultSettings,
+    )
+    .dependsOn(derivation)

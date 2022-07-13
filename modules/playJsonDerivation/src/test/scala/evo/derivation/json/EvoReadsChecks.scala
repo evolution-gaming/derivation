@@ -1,4 +1,4 @@
-package evo.derivation.circe
+package evo.derivation.json
 
 import evo.derivation.Config
 import evo.derivation.Discriminator
@@ -6,6 +6,12 @@ import evo.derivation.Embed
 import evo.derivation.LazySummon.LazySummonByConfig
 import evo.derivation.Rename
 import evo.derivation.SnakeCase
+import CheckData.Dictionary
+import CheckData.Document
+import CheckData.Mode
+import CheckData.Person
+import CheckData.User
+import CheckData.*
 import io.circe.Decoder
 import io.circe.parser.*
 import munit.FunSuite
@@ -21,7 +27,7 @@ import CheckData.TestClass
 import CheckData._
 import io.circe.syntax.given
 
-class EvoDecoderChecks extends FunSuite:
+class EvoReadsChecks extends FunSuite:
     test("TestClass is not derivable because it is not a case class nor a enum") {
         assertEquals(
           List(s"could not derive $AppliedDecoderTypeName, look's like $TestClassName is neither case class or enum"),
@@ -96,7 +102,7 @@ object CheckData:
     val TestClassName          = s"$Package.CheckData.TestClass"
     val AppliedDecoderTypeName = s"$DecoderTypeName[$TestClassName]"
 
-    case class Person(name: String, age: Int) derives Config, EvoDecoder, EvoEncoder
+    case class Person(name: String, age: Int) derives Config, EvoReads, EvoWrites
 
     val person = Person(name = "ololo", age = 11)
 
@@ -108,8 +114,8 @@ object CheckData:
         issueDate: Instant,
         @Embed author: Person,
     ) derives Config,
-          EvoDecoder,
-          EvoEncoder
+          EvoReads,
+          EvoWrites
 
     val uuid = UUID.fromString("68ede874-fb8a-11ec-a827-00155d6320ce").nn
     val date = Instant.now.nn
@@ -118,7 +124,7 @@ object CheckData:
 
     val documentJson = s"""{"documentId": "$uuid", "issue_date": "$date", "name": "alala", "age": 74}"""
 
-    enum User derives Config, EvoDecoder, EvoEncoder:
+    enum User derives Config, EvoReads, EvoWrites:
         case Authorized(login: String)
         case Anonymous
         case Admin(login: String, @Rename("access") rights: String)
@@ -134,7 +140,7 @@ object CheckData:
     val anonymousJson = s"""{"Anonymous" : {}}"""
 
     @Discriminator("mode")
-    enum Mode derives Config, EvoDecoder, EvoEncoder:
+    enum Mode derives Config, EvoReads, EvoWrites:
         @Rename("r") case Read(@Rename("b") bin: Boolean)
         @Rename("w") case Write(append: Boolean = false, bin: Boolean)
 
@@ -146,14 +152,14 @@ object CheckData:
 
     val writeJson = s"""{"mode" : "w", "append":true, "bin": true}"""
 
-    case class Dictionary(key: String, value: String, next: Option[Dictionary]) derives Config, EvoDecoder, EvoEncoder
+    case class Dictionary(key: String, value: String, next: Option[Dictionary]) derives Config, EvoReads, EvoWrites
 
     val dictionaryJson = """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban"}}"""
 
     val dictionary = Dictionary("a", "arbuz", Some(Dictionary("b", "baraban", None)))
 
     @Discriminator("kind") @SnakeCase
-    enum BinTree derives Config, EvoDecoder, EvoEncoder:
+    enum BinTree derives Config, EvoReads, EvoWrites:
         case Branch(value: Int, left: BinTree, right: BinTree)
         case Nil
 

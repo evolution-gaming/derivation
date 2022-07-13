@@ -1,6 +1,6 @@
-package evo.derivation.circe
+package evo.derivation.json
 
-import io.circe.Decoder
+
 import evo.derivation.Config
 import scala.compiletime.{summonFrom, erasedValue, summonInline}
 import evo.derivation.internal.underiveableError
@@ -8,29 +8,30 @@ import scala.deriving.Mirror
 import evo.derivation.LazySummon.LazySummonByInstance
 import evo.derivation.LazySummon.LazySummonByConfig
 import evo.derivation.LazySummon
-import io.circe.Encoder
+
 import evo.derivation.internal.tupleFromProduct
-import io.circe.Json
+
 import evo.derivation.Config.FieldInfo
-import io.circe.syntax._
-import io.circe.JsonObject.apply
-import io.circe.JsonObject
+
+import EvoWrites.SumEncoder
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
+import play.api.libs.json.*
+import play.api.libs.json.Writes
 
-trait EvoEncoder[A] extends Encoder[A]
+trait EvoWrites[A] extends Writes[A]
 
-object EvoEncoder:
-    inline def derived[A](using config: => Config[A]): EvoEncoder[A] =
+object EvoWrites:
+    inline def derived[A](using config: => Config[A]): EvoWrites[A] =
         summonFrom {
             case mirror: Mirror.ProductOf[A] => deriveForProduct[A].instance
             case given Mirror.SumOf[A]       => deriveForSum[A]
             case given ValueClass[A]         => deriveForNewtype[A]
-            case _                           => underiveableError[EvoEncoder[A], A]
+            case _                           => underiveableError[EvoWrites[A], A]
         }
 
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoEncoder, A] = deriveForProduct[A]
+    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoWrites, A] = deriveForProduct[A]
 
     private[circe] inline def deriveForSum[A](using
         config: => Config[A],
@@ -39,7 +40,7 @@ object EvoEncoder:
         given Matching[A] = Matching.create[A]
 
         val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoEncoder, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoWrites, mirror.MirroredElemTypes]
 
         val names = mirroredNames[A]
 
@@ -49,11 +50,11 @@ object EvoEncoder:
         mirror: Mirror.ProductOf[A],
     ): LazySummonByConfig[EvoObjectEncoder, A] =
         val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoEncoder, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoWrites, mirror.MirroredElemTypes]
 
         ProductEncoder[A](using mirror)(using summonInline[A <:< Product])(fieldInstances)
 
-    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoEncoder[A] =
+    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoWrites[A] =
         given Encoder[nt.Representation] = summonInline
 
         NewtypeEncoder[A]()
@@ -102,20 +103,20 @@ object EvoEncoder:
 
     end SumEncoder
 
-    class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder[nt.Representation]) extends EvoEncoder[A]:
+    class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder[nt.Representation]) extends EvoWrites[A]:
         def apply(a: A): Json = enc(nt.to(a))
 
-end EvoEncoder
+end EvoWrites
 
-trait EvoObjectEncoder[A] extends EvoEncoder[A] with Encoder.AsObject[A]
+trait EvoObjectEncoder[A] extends EvoWrites[A] with Encoder.AsObject[A]
 
 object EvoObjectEncoder:
     inline def derived[A](using config: => Config[A]): EvoObjectEncoder[A] =
         summonFrom {
-            case mirror: Mirror.ProductOf[A] => EvoEncoder.deriveForProduct[A].instance
-            case given Mirror.SumOf[A]       => EvoEncoder.deriveForSum[A]
+            case mirror: Mirror.ProductOf[A] => EvoWrites.deriveForProduct[A].instance
+            case given Mirror.SumOf[A]       => EvoWrites.deriveForSum[A]
             case given ValueClass[A]         => deriveForNewtype[A]
-            case _                           => underiveableError[EvoEncoder[A], A]
+            case _                           => underiveableError[EvoWrites[A], A]
         }
 
     private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoObjectEncoder[A] =
