@@ -105,14 +105,14 @@ object EvoReads:
                 (discriminator, down) = subDown
                 subName           <- cfg.constrFromRenamed
                                          .get(discriminator)
-                                         .toFailure(s"Constructor $subRenamed not found; expected one of:\n $all")
+                                         .toFailure(s"Constructor $discriminator not found; expected one of:\n $all")
                 sub               <-
                     subDecoders
                         .get(subName)
                         .toFailure(
                           s"Internal error: could not found $subName constructor info.\n This is 99% a bug, contact library authors",
                         )
-                result            <- sub.tryDecode(down)
+                result            <- sub.reads(down)
             yield result
 
     class NewtypeReads[A](using nt: ValueClass[A])(using reads: Reads[nt.Representation]) extends EvoReads[A]:
