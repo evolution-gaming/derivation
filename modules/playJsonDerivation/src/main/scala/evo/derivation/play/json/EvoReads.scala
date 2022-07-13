@@ -1,4 +1,4 @@
-package evo.derivation.json
+package evo.derivation.play.json
 
 import scala.deriving.Mirror
 import evo.derivation.Config
@@ -11,10 +11,22 @@ import scala.collection.immutable.Iterable
 import evo.derivation.LazySummon
 import evo.derivation.LazySummon.LazySummonByConfig
 import LazySummon.useEitherFast
+
 import java.util.Arrays
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
-import play.api.libs.json.{JsError, JsObject, JsPath, JsResult, JsSuccess, JsValue, Json, JsonValidationError, Reads}
+import play.api.libs.json.{
+    JsError,
+    JsNull,
+    JsObject,
+    JsPath,
+    JsResult,
+    JsSuccess,
+    JsValue,
+    Json,
+    JsonValidationError,
+    Reads,
+}
 
 import scala.collection.Seq
 import scala.util.Either
@@ -82,7 +94,7 @@ object EvoReads:
                 decoder: LazySummon.Of[Reads],
                 info: FieldInfo,
             ): Either[Seq[(JsPath, Seq[JsonValidationError])], decoder.FieldType] =
-                val js = if info.embed then json else json \ info.name
+                val js = if info.embed then json else (json \ info.name).getOrElse(JsNull)
                 decoder.use(js.validate[decoder.FieldType].asEither)
 
             override def reads(json: JsValue): JsResult[A] =

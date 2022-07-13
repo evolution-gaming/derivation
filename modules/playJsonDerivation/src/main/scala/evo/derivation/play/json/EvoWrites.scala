@@ -1,4 +1,4 @@
-package evo.derivation.json
+package evo.derivation.play.json
 
 import evo.derivation.Config
 import scala.compiletime.{summonFrom, erasedValue, summonInline}

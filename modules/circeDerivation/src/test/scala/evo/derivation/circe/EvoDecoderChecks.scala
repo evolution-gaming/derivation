@@ -81,7 +81,7 @@ class EvoEncoderChecks extends FunSuite:
     }
 
     test("recursive product") {
-        assertEquals(parse(dictionaryJson), Right(dictionary.asJson.deepDropNullValues))
+        assertEquals(parse(dictionaryJson), Right(dictionary.asJson))
     }
 
     test("recursive coproduct") {
@@ -148,7 +148,8 @@ object CheckData:
 
     case class Dictionary(key: String, value: String, next: Option[Dictionary]) derives Config, EvoDecoder, EvoEncoder
 
-    val dictionaryJson = """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban"}}"""
+    val dictionaryJson =
+        """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban", "next": null }}"""
 
     val dictionary = Dictionary("a", "arbuz", Some(Dictionary("b", "baraban", None)))
 

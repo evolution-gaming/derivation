@@ -1,4 +1,4 @@
-package evo.derivation.json
+package evo.derivation.play.json
 
 import evo.derivation.Config
 import evo.derivation.Discriminator
@@ -12,8 +12,6 @@ import CheckData.Mode
 import CheckData.Person
 import CheckData.User
 import CheckData.*
-import io.circe.Decoder
-import io.circe.parser.*
 import munit.FunSuite
 
 import java.time.Instant
@@ -22,16 +20,24 @@ import java.util.UUID
 import scala.CanEqual.derived
 import scala.compiletime.testing.Error
 import scala.compiletime.testing.typeCheckErrors
-
 import CheckData.TestClass
-import CheckData._
-import io.circe.syntax.given
+import CheckData.*
+import play.api.libs.json.*
+import play.api.libs.json.given
+import play.api.libs.json.Json
+
+import scala.util.Try
+
+extension [A](a: A) def asJson(using writes: Writes[A]) = writes.writes(a)
+def decode[A: EvoReads](str: String) = Try(Json.parse(str).validate[A].asEither).toEither.flatten
+def parse(str: String)               = Try(Json.parse(str)).toEither
 
 class EvoReadsChecks extends FunSuite:
+
     test("TestClass is not derivable because it is not a case class nor a enum") {
         assertEquals(
           List(s"could not derive $AppliedDecoderTypeName, look's like $TestClassName is neither case class or enum"),
-          typeCheckErrors("EvoDecoder.derived[TestClass]").map(_.message),
+          typeCheckErrors("EvoReads.derived[TestClass]").map(_.message),
         )
     }
 
@@ -66,6 +72,7 @@ class EvoReadsChecks extends FunSuite:
     }
 
 class EvoEncoderChecks extends FunSuite:
+
     test("plain product") {
         assertEquals(parse(personJson), Right(person.asJson))
     }
@@ -87,7 +94,7 @@ class EvoEncoderChecks extends FunSuite:
     }
 
     test("recursive product") {
-        assertEquals(parse(dictionaryJson), Right(dictionary.asJson.deepDropNullValues))
+        assertEquals(parse(dictionaryJson).toString, Right(dictionary.asJson).toString)
     }
 
     test("recursive coproduct") {
@@ -97,8 +104,8 @@ class EvoEncoderChecks extends FunSuite:
 object CheckData:
     class TestClass derives Config
 
-    val Package                = "evo.derivation.circe"
-    val DecoderTypeName        = s"$Package.EvoDecoder"
+    val Package                = "evo.derivation.play.json"
+    val DecoderTypeName        = s"$Package.EvoReads"
     val TestClassName          = s"$Package.CheckData.TestClass"
     val AppliedDecoderTypeName = s"$DecoderTypeName[$TestClassName]"
 
@@ -154,7 +161,8 @@ object CheckData:
 
     case class Dictionary(key: String, value: String, next: Option[Dictionary]) derives Config, EvoReads, EvoWrites
 
-    val dictionaryJson = """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban"}}"""
+    val dictionaryJson =
+        """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban", "next": null }}"""
 
     val dictionary = Dictionary("a", "arbuz", Some(Dictionary("b", "baraban", None)))
 
@@ -183,3 +191,8 @@ object CheckData:
 
     val binTree =
         BinTree.Branch(1, left = BinTree.Nil, right = BinTree.Branch(3, left = BinTree.Nil, right = BinTree.Nil))
+
+    given [A: Reads]: Reads[Option[A]] with
+        def reads(json: JsValue): JsResult[Option[A]] = json match
+            case JsNull => JsSuccess(None)
+            case other  => other.validate[A].map(Some(_))
