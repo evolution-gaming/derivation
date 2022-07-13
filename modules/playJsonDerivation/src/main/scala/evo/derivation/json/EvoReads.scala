@@ -53,7 +53,7 @@ object EvoReads:
 
     extension [A](oa: Option[A]) private def toFailure(s: => String): JsResult[A] = oa.fold(JsError(s))(JsSuccess(_))
 
-    //todo better name for one field
+    // todo better name for one field
     private def constName(json: JsValue, discriminator: Option[String]): JsResult[(String, JsValue)] =
         discriminator match
             case Some(field) =>
@@ -69,7 +69,6 @@ object EvoReads:
                               else JsError("Expecting an object with a single discriminator? key")
                 } yield (result, obj.apply(result))
 
-
     class ProductReadsMake[A](mirror: Mirror.ProductOf[A])(
         fieldInstances: LazySummon.All[Reads, mirror.MirroredElemTypes],
     ) extends LazySummonByConfig[EvoReads, A]:
@@ -79,15 +78,19 @@ object EvoReads:
 
             private def onField(
                 json: JsValue,
-            )(decoder: LazySummon.Of[Reads], info: FieldInfo) :Either[Seq[(JsPath, Seq[JsonValidationError])], decoder.FieldType] =
+            )(
+                decoder: LazySummon.Of[Reads],
+                info: FieldInfo,
+            ): Either[Seq[(JsPath, Seq[JsonValidationError])], decoder.FieldType] =
                 val js = if info.embed then json else json \ info.name
                 decoder.use(js.validate[decoder.FieldType].asEither)
 
             override def reads(json: JsValue): JsResult[A] =
-                fieldInstances.useEitherFast[FieldInfo ,Seq[(JsPath, Seq[JsonValidationError])]](infos)(onField(json)) match
+                fieldInstances.useEitherFast[FieldInfo, Seq[(JsPath, Seq[JsonValidationError])]](infos)(
+                  onField(json),
+                ) match
                     case Left(err)    => JsError(err)
                     case Right(tuple) => JsSuccess(mirror.fromProduct(tuple))
-
 
     class SumReads[A](config: => Config[A], mirror: Mirror.SumOf[A])(
         mkSubDecoders: => Map[String, Reads[A]],
@@ -99,18 +102,18 @@ object EvoReads:
         lazy val all                                   = cfg.constrFromRenamed.keys.mkString(", ")
         override def reads(json: JsValue): JsResult[A] =
             for
-                subDown           <- constName(json, cfg.discriminator)
+                subDown              <- constName(json, cfg.discriminator)
                 (discriminator, down) = subDown
-                subName           <- cfg.constrFromRenamed
-                                         .get(discriminator)
-                                         .toFailure(s"Constructor $discriminator not found; expected one of:\n $all")
-                sub               <-
+                subName              <- cfg.constrFromRenamed
+                                            .get(discriminator)
+                                            .toFailure(s"Constructor $discriminator not found; expected one of:\n $all")
+                sub                  <-
                     subDecoders
                         .get(subName)
                         .toFailure(
                           s"Internal error: could not found $subName constructor info.\n This is 99% a bug, contact library authors",
                         )
-                result            <- sub.reads(down)
+                result               <- sub.reads(down)
             yield result
 
     class NewtypeReads[A](using nt: ValueClass[A])(using reads: Reads[nt.Representation]) extends EvoReads[A]:
