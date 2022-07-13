@@ -75,21 +75,16 @@ object EvoReads:
             lazy val infos = config.top.fieldInfos
 
             private def onField(
-                cur: HCursor,
-            )(decoder: LazySummon.Of[Decoder], info: FieldInfo): Decoder.Result[decoder.FieldType] =
-                val cursor = if info.embed then cur else cur.downField(info.name)
-                decoder.use(cursor.as[decoder.FieldType])
+                json: JsValue,
+            )(decoder: LazySummon.Of[Reads], info: FieldInfo): JsResult[decoder.FieldType] =
+                val js = if info.embed then json else json \ info.name
+                decoder.use(js.validate[decoder.FieldType])
 
-            def apply(cur: HCursor): Decoder.Result[A] =
-                fieldInstances.useEitherFast(infos)(onField(cur)) match
+            def apply(json: JsValue): JsResult[A] =
+                fieldInstances.useEitherFast(infos)(onField(json)) match
                     case Left(err)    => Left(err)
                     case Right(tuple) => Right(mirror.fromProduct(tuple))
 
-            override def decodeAccumulating(cur: HCursor): Decoder.AccumulatingResult[A] =
-                fieldInstances.useEithers(infos)(onField(cur)) match
-                    case Left(head +: rest) => Validated.Invalid(NonEmptyList(head, rest.toList))
-                    case Left(_)            => Validated.invalidNel(DecodingFailure("unknown error", Nil))
-                    case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
 
     class SumReads[A](config: => Config[A], mirror: Mirror.SumOf[A])(
         mkSubDecoders: => Map[String, Reads[A]],
