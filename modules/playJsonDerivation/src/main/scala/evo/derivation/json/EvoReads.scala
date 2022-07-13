@@ -10,11 +10,14 @@ import evo.derivation.Config.FieldInfo
 import scala.collection.immutable.Iterable
 import evo.derivation.LazySummon
 import evo.derivation.LazySummon.LazySummonByConfig
-
+import LazySummon.useEitherFast
 import java.util.Arrays
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
-import play.api.libs.json.{JsObject, JsResult, JsSuccess, JsValue, Json, Reads, JsError}
+import play.api.libs.json.{JsError, JsObject, JsPath, JsResult, JsSuccess, JsValue, Json, JsonValidationError, Reads}
+
+import scala.collection.Seq
+import scala.util.Either
 
 trait EvoReads[A] extends Reads[A]
 
@@ -33,12 +36,12 @@ object EvoReads:
     ): LazySummonByConfig[EvoReads, A] =
         val fieldInstances =
             LazySummon.all[mirror.MirroredElemLabels, A, Reads, EvoReads, mirror.MirroredElemTypes]
-        ProductReads[A](mirror)(fieldInstances)
+        ProductReadsMake[A](mirror)(fieldInstances)
     end deriveForProduct
 
     private inline def deriveForSum[A](using config: => Config[A], mirror: Mirror.SumOf[A]): EvoReads[A] =
         val constInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Decoder, EvoReads, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Reads, EvoReads, mirror.MirroredElemTypes]
         val names          = mirroredNames[A]
         SumReads(config, mirror)(constInstances.toMap[A](names), names)
 
@@ -55,7 +58,7 @@ object EvoReads:
         discriminator match
             case Some(field) =>
                 for {
-                    value <- (json \ field).toEither
+                    value <- (json \ field).validate[JsValue]
                     str   <- value.validate[String]
                 } yield (str, json)
             case None        =>
@@ -64,26 +67,26 @@ object EvoReads:
                     keys    = obj.keys
                     result <- if keys.size == 1 then JsSuccess(keys.head)
                               else JsError("Expecting an object with a single discriminator? key")
-                } yield (result, obj \ result)
+                } yield (result, obj.apply(result))
 
 
-    class ProductReads[A](mirror: Mirror.ProductOf[A])(
-        fieldInstances: LazySummon.All[Decoder, mirror.MirroredElemTypes],
+    class ProductReadsMake[A](mirror: Mirror.ProductOf[A])(
+        fieldInstances: LazySummon.All[Reads, mirror.MirroredElemTypes],
     ) extends LazySummonByConfig[EvoReads, A]:
-        def instance(using config: => Config[A]) = new:
+        def instance(using config: => Config[A]): EvoReads[A] = new:
 
             lazy val infos = config.top.fieldInfos
 
             private def onField(
                 json: JsValue,
-            )(decoder: LazySummon.Of[Reads], info: FieldInfo): JsResult[decoder.FieldType] =
+            )(decoder: LazySummon.Of[Reads], info: FieldInfo) :Either[Seq[(JsPath, Seq[JsonValidationError])], decoder.FieldType] =
                 val js = if info.embed then json else json \ info.name
-                decoder.use(js.validate[decoder.FieldType])
+                decoder.use(js.validate[decoder.FieldType].asEither)
 
-            def apply(json: JsValue): JsResult[A] =
-                fieldInstances.useEitherFast(infos)(onField(json)) match
-                    case Left(err)    => Left(err)
-                    case Right(tuple) => Right(mirror.fromProduct(tuple))
+            override def reads(json: JsValue): JsResult[A] =
+                fieldInstances.useEitherFast[FieldInfo ,Seq[(JsPath, Seq[JsonValidationError])]](infos)(onField(json)) match
+                    case Left(err)    => JsError(err)
+                    case Right(tuple) => JsSuccess(mirror.fromProduct(tuple))
 
 
     class SumReads[A](config: => Config[A], mirror: Mirror.SumOf[A])(

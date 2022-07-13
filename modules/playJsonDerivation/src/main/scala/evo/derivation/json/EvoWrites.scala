@@ -1,6 +1,5 @@
 package evo.derivation.json
 
-
 import evo.derivation.Config
 import scala.compiletime.{summonFrom, erasedValue, summonInline}
 import evo.derivation.internal.underiveableError
@@ -8,12 +7,13 @@ import scala.deriving.Mirror
 import evo.derivation.LazySummon.LazySummonByInstance
 import evo.derivation.LazySummon.LazySummonByConfig
 import evo.derivation.LazySummon
+import evo.derivation.LazySummon.useCollect
 
 import evo.derivation.internal.tupleFromProduct
 
 import evo.derivation.Config.FieldInfo
 
-import EvoWrites.SumEncoder
+import EvoWrites.SumWrites
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
@@ -33,97 +33,73 @@ object EvoWrites:
 
     inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoWrites, A] = deriveForProduct[A]
 
-    private[circe] inline def deriveForSum[A](using
+    private[json] inline def deriveForSum[A](using
         config: => Config[A],
         mirror: Mirror.SumOf[A],
-    ): EvoObjectEncoder[A] =
+    ): EvoWrites[A] =
         given Matching[A] = Matching.create[A]
 
         val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoWrites, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Writes, EvoWrites, mirror.MirroredElemTypes]
 
         val names = mirroredNames[A]
 
-        new SumEncoder[A](fieldInstances.toMap(names))
+        new SumWrites[A](fieldInstances.toMap(names))
 
-    private[circe] inline def deriveForProduct[A](using
+    private[json] inline def deriveForProduct[A](using
         mirror: Mirror.ProductOf[A],
-    ): LazySummonByConfig[EvoObjectEncoder, A] =
+    ): LazySummonByConfig[EvoWrites, A] =
         val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoWrites, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, A, Writes, EvoWrites, mirror.MirroredElemTypes]
 
-        ProductEncoder[A](using mirror)(using summonInline[A <:< Product])(fieldInstances)
+        ProductWritesMake[A](using mirror)(using summonInline[A <:< Product])(fieldInstances)
 
     private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoWrites[A] =
-        given Encoder[nt.Representation] = summonInline
+        given Writes[nt.Representation] = summonInline
 
-        NewtypeEncoder[A]()
+        NewtypeWrites[A]()
 
-    class ProductEncoder[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
-        fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
-    ) extends LazySummonByConfig[EvoObjectEncoder, A]:
+    class ProductWritesMake[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
+        fieldInstances: LazySummon.All[Writes, mirror.MirroredElemTypes],
+    ) extends LazySummonByConfig[EvoWrites, A]:
 
-        private def encodeField(info: FieldInfo, json: Json): Vector[(String, Json)] =
-            json.asObject match
-                case Some(obj) if info.embed => obj.toVector
+        private def encodeField(info: FieldInfo, json: JsValue): Vector[(String, JsValue)] =
+            json.validate[JsObject].asOpt match
+                case Some(obj) if info.embed => obj.value.toVector
                 case _                       => Vector(info.name -> json)
 
-        def instance(using config: => Config[A]): EvoObjectEncoder[A] =
+        def instance(using config: => Config[A]): EvoWrites[A] =
             lazy val infos = config.top.fieldInfos
             a =>
                 val fields = tupleFromProduct(a)
-                type Res = Vector[(String, Json)]
+                type Res = Vector[(String, JsValue)]
                 val results = fieldInstances.useCollect[Res, FieldInfo](fields, infos)(
-                  [X] => (info: FieldInfo, a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
+                  [X] => (info: FieldInfo, a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
                 )
-                JsonObject.fromIterable(results.flatten)
+                JsObject(results.flatten)
 
-    end ProductEncoder
+    end ProductWritesMake
 
-    class SumEncoder[A](
-        mkSubEncoders: => Map[String, Encoder[A]],
+    class SumWrites[A](
+        mkSubWritess: => Map[String, Writes[A]],
     )(using config: => Config[A], mirror: Mirror.SumOf[A], matching: Matching[A])
-        extends EvoObjectEncoder[A]:
+        extends EvoWrites[A]:
         lazy val cfg      = config
-        lazy val encoders = mkSubEncoders
+        lazy val encoders = mkSubWritess
 
-        override def encodeObject(a: A): JsonObject =
-            val constructor = matching.matched(a)
-            val prod        = cfg.constructor(constructor).top
-
+        override def writes(a: A): JsValue =
+            val constructor  = matching.matched(a)
             val discrimValue = cfg.name(constructor)
+            val json         = encoders.get(constructor).fold[JsValue](JsObject.empty)(_.writes(a))
 
-            val json = encoders.get(constructor).fold(Json.fromJsonObject(JsonObject.empty))(_.apply(a))
-
-            cfg.discriminator.zip(json.asObject) match
+            cfg.discriminator.zip(json.validate[JsObject].asOpt) match
                 case Some(field -> obj) =>
-                    (field -> Json.fromString(discrimValue)) +: obj
+                    obj + (field -> JsString(discrimValue))
                 case None               =>
-                    JsonObject.singleton(discrimValue, json)
+                    JsObject.apply(Seq(discrimValue -> json))
+    end SumWrites
 
-    end SumEncoder
-
-    class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder[nt.Representation]) extends EvoWrites[A]:
-        def apply(a: A): Json = enc(nt.to(a))
+    class NewtypeWrites[A](using nt: ValueClass[A])(using enc: Writes[nt.Representation]) extends EvoWrites[A]:
+        def writes(o: A): JsValue = enc.writes(nt.to(o))
 
 end EvoWrites
-
-trait EvoObjectEncoder[A] extends EvoWrites[A] with Encoder.AsObject[A]
-
-object EvoObjectEncoder:
-    inline def derived[A](using config: => Config[A]): EvoObjectEncoder[A] =
-        summonFrom {
-            case mirror: Mirror.ProductOf[A] => EvoWrites.deriveForProduct[A].instance
-            case given Mirror.SumOf[A]       => EvoWrites.deriveForSum[A]
-            case given ValueClass[A]         => deriveForNewtype[A]
-            case _                           => underiveableError[EvoWrites[A], A]
-        }
-
-    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoObjectEncoder[A] =
-        given Encoder.AsObject[nt.Representation] = summonInline
-
-        NewtypeEncoder[A]()
-
-    class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation])
-        extends EvoObjectEncoder[A]:
-        def encodeObject(a: A): JsonObject = enc.encodeObject(nt.to(a))

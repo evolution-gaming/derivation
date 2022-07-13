@@ -88,7 +88,6 @@ object EvoEncoder:
 
         override def encodeObject(a: A): JsonObject =
             val constructor = matching.matched(a)
-            val prod        = cfg.constructor(constructor).top
 
             val discrimValue = cfg.name(constructor)
 
