@@ -65,7 +65,6 @@ object EvoReads:
 
     extension [A](oa: Option[A]) private def toFailure(s: => String): JsResult[A] = oa.fold(JsError(s))(JsSuccess(_))
 
-    // todo better name for one field
     private def constName(json: JsValue, discriminator: Option[String]): JsResult[(String, JsValue)] =
         discriminator match
             case Some(field) =>
@@ -78,7 +77,7 @@ object EvoReads:
                     obj    <- json.validate[JsObject]
                     keys    = obj.keys
                     result <- if keys.size == 1 then JsSuccess(keys.head)
-                              else JsError("Expecting an object with a single discriminator? key")
+                              else JsError("Expecting an object with a single key")
                 } yield (result, obj.apply(result))
 
     class ProductReadsMake[A](mirror: Mirror.ProductOf[A])(
