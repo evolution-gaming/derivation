@@ -15,7 +15,6 @@ import evo.derivation.Config.FieldInfo
 import io.circe.syntax._
 import io.circe.JsonObject.apply
 import io.circe.JsonObject
-import evo.derivation.circe.EvoEncoder.SumEncoder
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
@@ -89,7 +88,6 @@ object EvoEncoder:
 
         override def encodeObject(a: A): JsonObject =
             val constructor = matching.matched(a)
-            val prod        = cfg.constructor(constructor).top
 
             val discrimValue = cfg.name(constructor)
 
