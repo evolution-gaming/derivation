@@ -31,8 +31,8 @@ lazy val snapshotsRepo = MavenRepository(
 )
 
 lazy val publishSettings = Vector(
-  homepage               := Some(url("https://github.com/evolution-gaming/derivation")),
-  developers             := List(
+  homepage                := Some(url("https://github.com/evolution-gaming/derivation")),
+  developers              := List(
     Developer(
       "Odomontois",
       "Oleg Nizhnik",
@@ -46,9 +46,9 @@ lazy val publishSettings = Vector(
       url("https://github.com/FunFunFine"),
     ),
   ),
-  publishMavenStyle      := true,
-  Test / publishArtifact := false,
-  publishTo              := Some {
+  publishMavenStyle       := true,
+  Test / publishArtifact  := false,
+  publishTo               := Some {
       if (isSnapshot.value) snapshotsRepo else releasesRepo
   },
   credentials += {
@@ -62,8 +62,10 @@ lazy val publishSettings = Vector(
       else
           Credentials(Path.userHome / ".sbt" / "evo.credentials")
   },
-  versionScheme          := Some("early-semver"),
-  git.baseVersion        := "0.1",
+  versionScheme           := Some("early-semver"),
+  git.baseVersion         := "0.1",
+  git.formattedShaVersion :=
+      git.gitHeadCommit.value map { sha => s"${git.baseVersion.value}-$sha-SNAPSHOT" },
 )
 
 enablePlugins(GitVersioning)
