@@ -4,7 +4,7 @@ pull_request_rules:
       - author=evolution-scala-bot[bot]
     actions:
       request_reviews:
-        users: [ Odomontois ]
+        users: [ Odomontois, FunFunFine ]
       label:
         add: [ dependency-update ]
 
