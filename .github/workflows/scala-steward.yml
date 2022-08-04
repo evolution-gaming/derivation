@@ -16,7 +16,7 @@ jobs:
       uses: tibdex/github-app-token@v1
       with:
         app_id: 123456
-        private_key: ${{ secrets.APP_PRIVATE_KEY }}
+        private_key: ${{ secrets.STEWARD_APP_PRIVATE_KEY }}
         
     - name: Launch Scala Steward
       uses: scala-steward-org/scala-steward-action@v2
