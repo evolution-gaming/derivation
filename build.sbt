@@ -63,6 +63,7 @@ lazy val publishSettings = Vector(
           Credentials(Path.userHome / ".sbt" / "evo.credentials")
   },
   versionScheme          := Some("early-semver"),
+  git.baseVersion        := "0",
 )
 
 enablePlugins(GitVersioning)
