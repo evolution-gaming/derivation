@@ -1,7 +1,7 @@
 pull_request_rules:
   - name: Request reviews and label Steward's PRs
     conditions:
-      - author=app/evolution-scala-bot 
+      - author=evolution-scala-bot[bot]
     actions:
       request_reviews:
         users: [ Odomontois, funfunfine ]
@@ -10,7 +10,7 @@ pull_request_rules:
 
   - name: Merge Steward's PRs
     conditions:
-      - author=app/evolution-scala-bot 
+      - author=evolution-scala-bot[bot]
       - or:
           - and:
               - "#files=1"
