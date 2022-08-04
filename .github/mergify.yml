@@ -1,0 +1,32 @@
+pull_request_rules:
+  - name: Request reviews and label Steward's PRs
+    conditions:
+      - author=app/evolution-scala-bot 
+    actions:
+      request_reviews:
+        users: [ Odomontois, funfunfine ]
+      label:
+        add: [ dependency-update ]
+
+  - name: Merge Steward's PRs
+    conditions:
+      - author=app/evolution-scala-bot 
+      - or:
+          - and:
+              - "#files=1"
+              - or:
+                  - files=project/build.properties
+                  - files=project/plugins.sbt
+          - body~=labels:.*semver-patch
+          - "#approved-reviews-by>=1"
+      - and:
+          - check-success~= build
+    actions:
+      merge:
+        method: rebase
+
+  - name: Delete head branch after merge
+    conditions:
+      - merged
+    actions:
+      delete_head_branch:
