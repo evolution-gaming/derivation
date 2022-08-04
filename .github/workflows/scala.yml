@@ -3,6 +3,7 @@ name: Scala CI
 on:
   push:
     branches: [ "base" ]
+    tags: ["v*"]
   pull_request:
     branches: [ "base" ]
   workflow_dispatch:
