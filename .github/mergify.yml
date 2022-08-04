@@ -19,8 +19,7 @@ pull_request_rules:
                   - files=project/plugins.sbt
           - body~=labels:.*semver-patch
           - "#approved-reviews-by>=1"
-      - and:
-          - check-success~= build
+      - check-success~= build
     actions:
       merge:
         method: rebase
