@@ -75,14 +75,14 @@ val defaultSettings = testDependencies ++ scala3Settings ++ publishSettings
 val modules = file("modules")
 
 lazy val derivation = project
-    .in(modules / "derivation")
+    .in(modules / "core")
     .settings(
       name := "derivation-core",
     )
     .settings(defaultSettings)
 
-lazy val circeDerivation = project
-    .in(modules / "circeDerivation")
+lazy val circe = project
+    .in(modules / "circe")
     .settings(
       name                              := "derivation-circe",
       libraryDependencies += "io.circe" %% "circe-core"   % Version.circe,
@@ -91,8 +91,8 @@ lazy val circeDerivation = project
     )
     .dependsOn(derivation)
 
-lazy val tapirDerivation = project
-    .in(modules / "tapirDerivation")
+lazy val tapir = project
+    .in(modules / "tapir")
     .settings(
       name                                                 := "derivation-tapir",
       libraryDependencies += "com.softwaremill.sttp.tapir" %% "tapir-core" % Version.tapir,
@@ -100,8 +100,16 @@ lazy val tapirDerivation = project
     )
     .dependsOn(derivation)
 
-lazy val playJsonDerivation = project
-    .in(modules / "playJsonDerivation")
+lazy val cats = project
+    .in(modules / "cats")
+    .settings(
+      name                                    := "derivation-cats",
+      libraryDependencies += "org.typelevel " %% "cats-kernel" % Version.cats,
+      defaultSettings,
+    )
+
+lazy val playJson = project
+    .in(modules / "playJson")
     .settings(
       name                                       := "derivation-play-json",
       libraryDependencies += "com.typesafe.play" %% "play-json" % Version.playJson cross CrossVersion.for3Use2_13,
