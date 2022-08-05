@@ -103,8 +103,8 @@ lazy val tapir = project
 lazy val cats = project
     .in(modules / "cats")
     .settings(
-      name                                    := "derivation-cats",
-      libraryDependencies += "org.typelevel " %% "cats-kernel" % Version.cats,
+      name                                   := "derivation-cats",
+      libraryDependencies += "org.typelevel" %% "cats-kernel" % Version.cats,
       defaultSettings,
     )
 
