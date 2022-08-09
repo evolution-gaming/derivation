@@ -69,10 +69,17 @@ object Config:
     end fromAnnots
 
     private def basicProduct(annotations: Annotations): ForProduct =
+        def field(name: String) = ForField(
+          name = name,
+          annotations = annotations.byField.getOrElse(name, Vector.empty),
+        )
+
         ForProduct(
           name = annotations.name,
-          fields = annotations.fields.map(name => name -> ForField(name)).toMap,
+          fields = annotations.fields.map(name => name -> field(name)).toMap,
+          annotations = annotations.forType,
         )
+    end basicProduct
 
     private def fromAllAnnots(annotations: AllAnnotations): Config[Nothing] =
         val constructors = annotations.subtypes.map((name, annots) => name -> basicProduct(annots))

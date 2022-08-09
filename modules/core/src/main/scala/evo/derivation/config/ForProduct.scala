@@ -1,8 +1,13 @@
 package evo.derivation.config
 
-import evo.derivation.internal.{updater, update, updateMap, Updater, updaters, mapValues}
+import evo.derivation.DerivationAnnotation
+import evo.derivation.internal.{Updater, mapValues, update, updateMap, updater, updaters}
 
-case class ForProduct(name: String, fields: Map[String, ForField] = Map.empty):
+case class ForProduct(
+    name: String,
+    fields: Map[String, ForField] = Map.empty,
+    annotations: Vector[DerivationAnnotation] = Vector.empty,
+):
     lazy val (fieldNames, fieldInfos) = fields.toVector.unzip
 
     private def set[X](upd: Updater[ForProduct, X])(value: X): ForProduct = upd(_ => value)(this)
@@ -23,3 +28,9 @@ object ForProduct:
 
     def field(name: String): Updater[ForProduct, ForField] = update[ForProduct](_.fields) compose updateMap(name)
 end ForProduct
+
+case class ForField(
+    name: String,
+    embed: Boolean = false,
+    annotations: Vector[DerivationAnnotation] = Vector.empty,
+)
