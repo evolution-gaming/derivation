@@ -10,9 +10,9 @@ import data.*
 
 import scala.util.Try
 
-def decode[A: EvoReads](str: String) = Try(Json.parse(str).validate[A].asEither).toEither.flatten
-
 class EvoReadsChecks extends FunSuite:
+
+    def decode[A: EvoReads](str: String) = Try(Json.parse(str).validate[A].asEither).toEither.flatten
 
     test("TestClass is not derivable because it is not a case class nor a enum") {
         assertEquals(

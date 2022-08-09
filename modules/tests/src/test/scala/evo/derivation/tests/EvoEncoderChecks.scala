@@ -27,7 +27,7 @@ class EvoEncoderChecks extends FunSuite:
     }
 
     test("recursive product") {
-        assertEquals(parse(Dictionary.dictionaryJson), Right(Dictionary.dictionary.asJson.deepDropNullValues))
+        assertEquals(parse(Dictionary.dictionaryJsonWithNull), Right(Dictionary.dictionary.asJson))
     }
 
     test("recursive coproduct") {

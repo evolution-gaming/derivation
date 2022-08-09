@@ -1,12 +1,13 @@
 package evo.derivation.tests.data
 
+import evo.derivation.cats.EvoEq
 import evo.derivation.circe.{EvoDecoder, EvoEncoder}
 import evo.derivation.config.Config
 import evo.derivation.play.json.{EvoReads, EvoWrites}
 import evo.derivation.{Discriminator, Rename}
 
 @Discriminator("mode")
-enum Mode derives Config, EvoDecoder, EvoEncoder, EvoReads, EvoWrites:
+enum Mode derives Config, EvoDecoder, EvoEncoder, EvoReads, EvoWrites, EvoEq:
     @Rename("r") case Read(@Rename("b") bin: Boolean)
     @Rename("w") case Write(append: Boolean = false, bin: Boolean)
 
