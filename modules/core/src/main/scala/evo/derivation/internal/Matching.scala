@@ -14,6 +14,7 @@ object Matching:
         val matchers = summonAll[Tuple.Map[mirror.MirroredElemTypes, [b] =>> TypeTest[A, b]]].toIArray
 
         a => find(matchers, names, a)
+    end create
 
     private def find[A](matchers: IArray[Any], names: IArray[Any], a: A): String =
         def go(i: Int): String =
@@ -21,3 +22,5 @@ object Matching:
             else if matchers(i).asInstanceOf[TypeTest[A, A]].unapply(a).isDefined then names(i).asInstanceOf[String]
             else go(i + 1)
         go(0)
+    end find
+end Matching

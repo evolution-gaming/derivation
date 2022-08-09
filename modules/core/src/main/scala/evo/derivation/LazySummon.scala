@@ -1,8 +1,8 @@
 package evo.derivation
 
+import evo.derivation.config.Config
 import scala.annotation.implicitNotFound
 import scala.compiletime.{summonAll, uninitialized, erasedValue}
-import evo.derivation.Config
 import scala.reflect.ClassTag.apply
 import scala.reflect.ClassTag
 
@@ -16,6 +16,7 @@ trait LazySummon[+Name, +From, TC[_], +TCC[x] <: TC[x], A]:
     final def use[R](f: TC[A] ?=> R): R =
         given TC[A] = tc
         f
+end LazySummon
 
 object LazySummon:
     type Of[TC[_]] = LazySummon[_, _, TC, _, _]
@@ -39,6 +40,7 @@ object LazySummon:
         name: ValueOf[Name],
     ): LazySummon[Name, From, TC, TCC, A] with
         def tc: TC[A] = constructor.instance(using config.constructor(name.value).as[A])
+    end given
 
     inline def all[Names <: Tuple, From, TC[_], TCC[x] <: TC[x], Fields <: Tuple]: All[TC, Fields] =
         type Summons = Tuple.Map[Tuple.Zip[Names, Fields], [A] =>> Applied[TC, TCC, From, A]]
@@ -53,6 +55,7 @@ object LazySummon:
             }
 
             Tuple.fromIArray(elements).asInstanceOf[Tuple.Map[Fields, Res]]
+        end useOn
 
         def useCollect[Res: ClassTag, Info](fields: Fields, infos: Vector[Info])(
             f: [A] => (Info, A, TC[A]) => Res,
@@ -103,3 +106,5 @@ object LazySummon:
             inline erasedValue[Tuple.Union[Fields]] match
                 case _: A =>
                     names.zip(all).map((name, lz) => name -> lz.asInstanceOf[LazySummon[_, _, TC, _, A]].tc).toMap
+    end extension
+end LazySummon

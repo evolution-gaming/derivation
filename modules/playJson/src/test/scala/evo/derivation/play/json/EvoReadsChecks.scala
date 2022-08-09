@@ -1,6 +1,5 @@
 package evo.derivation.play.json
 
-import evo.derivation.Config
 import evo.derivation.Discriminator
 import evo.derivation.Embed
 import evo.derivation.LazySummon.LazySummonByConfig
@@ -22,6 +21,7 @@ import scala.compiletime.testing.Error
 import scala.compiletime.testing.typeCheckErrors
 import CheckData.TestClass
 import CheckData.*
+import evo.derivation.config.Config
 import play.api.libs.json.*
 import play.api.libs.json.given
 import play.api.libs.json.Json
@@ -70,6 +70,7 @@ class EvoReadsChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(decode[BinTree](binTreeJson), Right(binTree))
     }
+end EvoReadsChecks
 
 class EvoEncoderChecks extends FunSuite:
 
@@ -100,6 +101,7 @@ class EvoEncoderChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(parse(binTreeJson), Right(binTree.asJson))
     }
+end EvoEncoderChecks
 
 object CheckData:
     class TestClass derives Config
@@ -135,6 +137,7 @@ object CheckData:
         case Authorized(login: String)
         case Anonymous
         case Admin(login: String, @Rename("access") rights: String)
+    end User
 
     val authorized = User.Authorized("ololo")
 
@@ -150,6 +153,7 @@ object CheckData:
     enum Mode derives Config, EvoReads, EvoWrites:
         @Rename("r") case Read(@Rename("b") bin: Boolean)
         @Rename("w") case Write(append: Boolean = false, bin: Boolean)
+    end Mode
 
     val readJson = s"""{"mode": "r", "b": false}"""
 
@@ -170,6 +174,7 @@ object CheckData:
     enum BinTree derives Config, EvoReads, EvoWrites:
         case Branch(value: Int, left: BinTree, right: BinTree)
         case Nil
+    end BinTree
 
     val binTreeJson = """{
             "kind" : "branch",
@@ -196,3 +201,5 @@ object CheckData:
         def reads(json: JsValue): JsResult[Option[A]] = json match
             case JsNull => JsSuccess(None)
             case other  => other.validate[A].map(Some(_))
+    end given
+end CheckData

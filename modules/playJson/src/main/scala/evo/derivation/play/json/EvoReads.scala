@@ -1,11 +1,8 @@
 package evo.derivation.play.json
 
 import scala.deriving.Mirror
-import evo.derivation.Config
-
 import scala.compiletime.*
 import evo.derivation.internal.underiveableError
-import evo.derivation.Config.FieldInfo
 
 import scala.collection.immutable.Iterable
 import evo.derivation.LazySummon
@@ -15,18 +12,8 @@ import LazySummon.useEitherFast
 import java.util.Arrays
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
-import play.api.libs.json.{
-    JsError,
-    JsNull,
-    JsObject,
-    JsPath,
-    JsResult,
-    JsSuccess,
-    JsValue,
-    Json,
-    JsonValidationError,
-    Reads,
-}
+import evo.derivation.config.{Config, ForField}
+import play.api.libs.json.{JsError, JsNull, JsObject, JsPath, JsResult, JsSuccess, JsValue, Json, JsonValidationError, Reads}
 
 import scala.collection.Seq
 import scala.util.Either
@@ -56,6 +43,7 @@ object EvoReads:
             LazySummon.all[mirror.MirroredElemLabels, A, Reads, EvoReads, mirror.MirroredElemTypes]
         val names          = mirroredNames[A]
         SumReads(config, mirror)(constInstances.toMap[A](names), names)
+    end deriveForSum
 
     private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoReads[A] =
         given Reads[nt.Representation] = summonInline
@@ -91,17 +79,19 @@ object EvoReads:
                 json: JsValue,
             )(
                 decoder: LazySummon.Of[Reads],
-                info: FieldInfo,
+                info: ForField,
             ): Either[Seq[(JsPath, Seq[JsonValidationError])], decoder.FieldType] =
                 val js = if info.embed then json else (json \ info.name).getOrElse(JsNull)
                 decoder.use(js.validate[decoder.FieldType].asEither)
+            end onField
 
             override def reads(json: JsValue): JsResult[A] =
-                fieldInstances.useEitherFast[FieldInfo, Seq[(JsPath, Seq[JsonValidationError])]](infos)(
+                fieldInstances.useEitherFast[ForField, Seq[(JsPath, Seq[JsonValidationError])]](infos)(
                   onField(json),
                 ) match
                     case Left(err)    => JsError(err)
                     case Right(tuple) => JsSuccess(mirror.fromProduct(tuple))
+    end ProductReadsMake
 
     class SumReads[A](config: => Config[A], mirror: Mirror.SumOf[A])(
         mkSubDecoders: => Map[String, Reads[A]],
@@ -126,6 +116,8 @@ object EvoReads:
                         )
                 result               <- sub.reads(down)
             yield result
+    end SumReads
 
     class NewtypeReads[A](using nt: ValueClass[A])(using reads: Reads[nt.Representation]) extends EvoReads[A]:
         override def reads(json: JsValue): JsResult[A] = json.validate[nt.Representation].map(nt.from)
+end EvoReads

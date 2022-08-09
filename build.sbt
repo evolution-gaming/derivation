@@ -107,6 +107,7 @@ lazy val cats = project
       libraryDependencies += "org.typelevel" %% "cats-kernel" % Version.cats,
       defaultSettings,
     )
+    .dependsOn(derivation)
 
 lazy val playJson = project
     .in(modules / "playJson")

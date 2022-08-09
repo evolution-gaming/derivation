@@ -1,6 +1,5 @@
 package evo.derivation.circe
 
-import evo.derivation.Config
 import evo.derivation.Discriminator
 import evo.derivation.Embed
 import evo.derivation.LazySummon.LazySummonByConfig
@@ -19,6 +18,7 @@ import scala.compiletime.testing.typeCheckErrors
 
 import CheckData.TestClass
 import CheckData._
+import evo.derivation.config.Config
 import io.circe.syntax.given
 
 class EvoDecoderChecks extends FunSuite:
@@ -34,6 +34,8 @@ class EvoDecoderChecks extends FunSuite:
     }
 
     test("complex product") {
+        println(summon[Config[Document]])
+        
         assertEquals(decode[Document](documentJson), Right(document))
     }
 
@@ -58,6 +60,7 @@ class EvoDecoderChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(decode[BinTree](binTreeJson), Right(binTree))
     }
+end EvoDecoderChecks
 
 class EvoEncoderChecks extends FunSuite:
     test("plain product") {
@@ -87,6 +90,7 @@ class EvoEncoderChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(parse(binTreeJson), Right(binTree.asJson))
     }
+end EvoEncoderChecks
 
 object CheckData:
     class TestClass derives Config
@@ -122,6 +126,7 @@ object CheckData:
         case Authorized(login: String)
         case Anonymous
         case Admin(login: String, @Rename("access") rights: String)
+    end User
 
     val authorized = User.Authorized("ololo")
 
@@ -137,6 +142,7 @@ object CheckData:
     enum Mode derives Config, EvoDecoder, EvoEncoder:
         @Rename("r") case Read(@Rename("b") bin: Boolean)
         @Rename("w") case Write(append: Boolean = false, bin: Boolean)
+    end Mode
 
     val readJson = s"""{"mode": "r", "b": false}"""
 
@@ -157,6 +163,7 @@ object CheckData:
     enum BinTree derives Config, EvoDecoder, EvoEncoder:
         case Branch(value: Int, left: BinTree, right: BinTree)
         case Nil
+    end BinTree
 
     val binTreeJson = """{
             "kind" : "branch",
@@ -178,3 +185,4 @@ object CheckData:
 
     val binTree =
         BinTree.Branch(1, left = BinTree.Nil, right = BinTree.Branch(3, left = BinTree.Nil, right = BinTree.Nil))
+end CheckData

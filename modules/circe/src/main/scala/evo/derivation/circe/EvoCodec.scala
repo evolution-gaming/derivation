@@ -1,6 +1,6 @@
 package evo.derivation.circe
 
-import evo.derivation.Config
+import evo.derivation.config.Config
 import io.circe.Decoder.AccumulatingResult
 import io.circe.{Codec, Decoder, Encoder, HCursor, Json}
 
@@ -12,6 +12,7 @@ object EvoCodec:
         val decoder = EvoDecoder.derived[A]
 
         EvoCodecImpl(decoder, encoder)
+    end derived
 
     class EvoCodecImpl[A](decoder: Decoder[A], encoder: Encoder[A]) extends EvoCodec[A]:
         export decoder.apply
@@ -19,6 +20,7 @@ object EvoCodec:
         def apply(a: A): Json = encoder(a)
 
         override def decodeAccumulating(c: HCursor) = decoder.decodeAccumulating(c)
+    end EvoCodecImpl
 end EvoCodec
 
 trait EvoObjectCodec[A] extends EvoObjectEncoder[A] with EvoDecoder[A] with Codec.AsObject[A]
@@ -29,10 +31,12 @@ object EvoObjectCodec:
         val decoder = EvoDecoder.derived[A]
 
         EvoCodecImpl(decoder, encoder)
+    end derived
 
     class EvoCodecImpl[A](decoder: Decoder[A], encoder: Encoder.AsObject[A]) extends EvoObjectCodec[A]:
         export decoder.apply
         export encoder.encodeObject
 
         override def decodeAccumulating(c: HCursor) = decoder.decodeAccumulating(c)
+    end EvoCodecImpl
 end EvoObjectCodec
