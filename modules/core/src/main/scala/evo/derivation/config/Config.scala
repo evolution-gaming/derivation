@@ -22,7 +22,6 @@ case class Config[+T](
                     case Some(field) => copy(top = top.applyRenaming(Some(field), transformation(field)))
                     // for class/enum: transform everything
                     case None        => Config.renaming(transformation)(this)
-                end match
             case Discriminator(dis)     => copy(discriminator = Some(dis))
             case Rename(newName)        => copy(top = top.applyRenaming(fieldName, newName))
             case Embed()                =>
@@ -76,6 +75,7 @@ object Config:
 
         ForProduct(
           name = annotations.name,
+          fieldNames = annotations.fields,
           fields = annotations.fields.map(name => name -> field(name)).toMap,
           annotations = annotations.forType,
         )

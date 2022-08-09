@@ -81,12 +81,20 @@ lazy val derivation = project
     )
     .settings(defaultSettings)
 
+lazy val tests = project
+    .in(modules / "tests")
+    .settings(
+      publish / skip                    := true,
+      defaultSettings,
+      libraryDependencies += "io.circe" %% "circe-parser" % Version.circe % Test,
+    )
+    .dependsOn(derivation, circe, tapir, cats, playJson)
+
 lazy val circe = project
     .in(modules / "circe")
     .settings(
       name                              := "derivation-circe",
-      libraryDependencies += "io.circe" %% "circe-core"   % Version.circe,
-      libraryDependencies += "io.circe" %% "circe-parser" % Version.circe % Test,
+      libraryDependencies += "io.circe" %% "circe-core" % Version.circe,
       defaultSettings,
     )
     .dependsOn(derivation)

@@ -18,7 +18,7 @@ import io.circe.JsonObject
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
-import evo.derivation.config.{Config,  ForField}
+import evo.derivation.config.{Config, ForField}
 
 trait EvoEncoder[A] extends Encoder[A]
 
@@ -60,7 +60,6 @@ object EvoEncoder:
         given Encoder[nt.Representation] = summonInline
 
         NewtypeEncoder[A]()
-    end deriveForNewtype
 
     class ProductEncoder[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
         fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
@@ -128,9 +127,9 @@ object EvoObjectEncoder:
         given Encoder.AsObject[nt.Representation] = summonInline
 
         NewtypeEncoder[A]()
-    end deriveForNewtype
 
     class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation])
         extends EvoObjectEncoder[A]:
         def encodeObject(a: A): JsonObject = enc.encodeObject(nt.to(a))
+    end NewtypeEncoder
 end EvoObjectEncoder

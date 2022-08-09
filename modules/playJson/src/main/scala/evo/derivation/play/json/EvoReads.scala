@@ -13,7 +13,18 @@ import java.util.Arrays
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
 import evo.derivation.config.{Config, ForField}
-import play.api.libs.json.{JsError, JsNull, JsObject, JsPath, JsResult, JsSuccess, JsValue, Json, JsonValidationError, Reads}
+import play.api.libs.json.{
+    JsError,
+    JsNull,
+    JsObject,
+    JsPath,
+    JsResult,
+    JsSuccess,
+    JsValue,
+    Json,
+    JsonValidationError,
+    Reads,
+}
 
 import scala.collection.Seq
 import scala.util.Either

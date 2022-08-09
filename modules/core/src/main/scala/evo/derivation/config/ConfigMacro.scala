@@ -57,6 +57,4 @@ class ConfigMacro(using q: Quotes):
         val subtypes = Varargs(sym.children.map(subtypeAnnotation))
 
         '{ Map($subtypes: _*) }
-
-    end subtypeAnnotations
 end ConfigMacro

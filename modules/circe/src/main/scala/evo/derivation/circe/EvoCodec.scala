@@ -12,7 +12,6 @@ object EvoCodec:
         val decoder = EvoDecoder.derived[A]
 
         EvoCodecImpl(decoder, encoder)
-    end derived
 
     class EvoCodecImpl[A](decoder: Decoder[A], encoder: Encoder[A]) extends EvoCodec[A]:
         export decoder.apply
@@ -31,7 +30,6 @@ object EvoObjectCodec:
         val decoder = EvoDecoder.derived[A]
 
         EvoCodecImpl(decoder, encoder)
-    end derived
 
     class EvoCodecImpl[A](decoder: Decoder[A], encoder: Encoder.AsObject[A]) extends EvoObjectCodec[A]:
         export decoder.apply

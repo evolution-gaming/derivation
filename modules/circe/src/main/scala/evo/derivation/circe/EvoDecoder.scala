@@ -56,7 +56,6 @@ object EvoDecoder:
         given Decoder[nt.Representation] = summonInline
 
         NewtypeDecoder[A]()
-    end deriveForValueClass
 
     extension [A](oa: Option[A])
         private def toFailure(s: => String): Decoder.Result[A] = oa.toRight(DecodingFailure(s, Nil))

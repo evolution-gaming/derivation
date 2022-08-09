@@ -1,9 +1,79 @@
 package evo.derivation.cats
 
 import cats.kernel.Eq
+import evo.derivation.LazySummon.LazySummonByConfig
+import evo.derivation.{LazySummon, ValueClass}
 import evo.derivation.config.Config
+import evo.derivation.internal.{Matching, mirroredNames, underiveableError}
 
-trait EvoEq[A] extends Equiv[A] with Eq[A]
+import scala.compiletime.{summonFrom, summonInline}
+import scala.deriving.Mirror
+
+trait EvoEq[A] extends Equiv[A] with Eq[A]:
+    def equiv(x: A, y: A): Boolean = eqv(x, y)
 
 object EvoEq:
-    inline def derived[A](using cfg: Config[A]): EvoEq[A] = ???
+    inline def derived[A](using cfg: Config[A]): EvoEq[A] =
+        summonFrom {
+            case mirror: Mirror.ProductOf[A] => deriveForProduct[A].instance
+            case given Mirror.SumOf[A]       => deriveForSum[A]
+            case given ValueClass[A]         => deriveForValueClass[A]
+            case _                           => underiveableError[EvoEq[A], A]
+        }
+
+    inline def deriveForProduct[A](using
+        mirror: Mirror.ProductOf[A],
+    ): LazySummonByConfig[EvoEq, A] =
+        val fieldInstances =
+            LazySummon.all[mirror.MirroredElemLabels, A, Eq, EvoEq, mirror.MirroredElemTypes]
+        ProductEq[A](mirror)(using summonInline[A <:< Product])(fieldInstances)
+
+    end deriveForProduct
+
+    private[cats] inline def deriveForSum[A](using
+        config: => Config[A],
+        mirror: Mirror.SumOf[A],
+    ): EvoEq[A] =
+        given Matching[A] = Matching.create[A]
+
+        val fieldInstances =
+            LazySummon.all[mirror.MirroredElemLabels, A, Eq, EvoEq, mirror.MirroredElemTypes]
+
+        val names = mirroredNames[A]
+
+        new SumEq[A](fieldInstances.toMap(names))
+    end deriveForSum
+
+    private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoEq[A] =
+        given Eq[nt.Representation] = summonInline
+
+        ValueClasEq[A]()
+
+    class ProductEq[A](mirror: Mirror.ProductOf[A])(using A <:< Product)(
+        instances: LazySummon.All[Eq, mirror.MirroredElemTypes],
+    ) extends LazySummonByConfig[EvoEq, A]:
+        def instance(using => Config[A]): EvoEq[A] = new:
+            lazy val stricts = instances.toVector[Any]
+
+            def eqv(x: A, y: A): Boolean =
+                (0 until stricts.length).forall(i => stricts(i).eqv(x.productElement(i), y.productElement(i)))
+
+    end ProductEq
+
+    class SumEq[A](
+        mkSubEncoders: => Map[String, Eq[A]],
+    )(using config: => Config[A], mirror: Mirror.SumOf[A], matching: Matching[A])
+        extends EvoEq[A]:
+
+        lazy val subs                = mkSubEncoders
+        def eqv(x: A, y: A): Boolean =
+            val xname = matching.matched(x)
+            matching.matched(y) == xname && {
+                subs(xname).eqv(x, y)
+            }
+    end SumEq
+
+    class ValueClasEq[A](using nt: ValueClass[A])(using reprEq: Eq[nt.Representation]) extends EvoEq[A]:
+        def eqv(x: A, y: A): Boolean = reprEq.eqv(nt.to(x), nt.to(y))
+
+end EvoEq

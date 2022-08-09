@@ -57,7 +57,6 @@ object EvoWrites:
         given Writes[nt.Representation] = summonInline
 
         NewtypeWrites[A]()
-    end deriveForNewtype
 
     class ProductWritesMake[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
         fieldInstances: LazySummon.All[Writes, mirror.MirroredElemTypes],

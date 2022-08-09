@@ -106,5 +106,10 @@ object LazySummon:
             inline erasedValue[Tuple.Union[Fields]] match
                 case _: A =>
                     names.zip(all).map((name, lz) => name -> lz.asInstanceOf[LazySummon[_, _, TC, _, A]].tc).toMap
+
+        inline def toVector[A]: Vector[TC[A]] =
+            inline erasedValue[Tuple.Union[Fields]] match
+                case _: A =>
+                    all.map(lz => lz.tc.asInstanceOf[TC[A]]).toVector
     end extension
 end LazySummon

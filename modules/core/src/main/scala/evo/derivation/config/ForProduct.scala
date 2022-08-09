@@ -5,10 +5,11 @@ import evo.derivation.internal.{Updater, mapValues, update, updateMap, updater, 
 
 case class ForProduct(
     name: String,
+    fieldNames: Vector[String] = Vector.empty,
     fields: Map[String, ForField] = Map.empty,
     annotations: Vector[DerivationAnnotation] = Vector.empty,
 ):
-    lazy val (fieldNames, fieldInfos) = fields.toVector.unzip
+    lazy val fieldInfos = fieldNames.map(fields)
 
     private def set[X](upd: Updater[ForProduct, X])(value: X): ForProduct = upd(_ => value)(this)
 

@@ -16,7 +16,6 @@ object ValueClass:
     transparent inline given derived[A]: ValueClass[A] = ${ derivedMacro[A] }
 
     def derivedMacro[A: Type](using q: Quotes): Expr[ValueClass[A]] = ValueClassMacro().result
-end ValueClass
 
 private class ValueClassMacro[A: Type](using q: Quotes):
     import q.reflect.*
