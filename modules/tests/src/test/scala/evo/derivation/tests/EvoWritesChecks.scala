@@ -1,6 +1,5 @@
 package evo.derivation.tests
 
-
 import evo.derivation.play.json.EvoReads
 import munit.FunSuite
 import play.api.libs.json.{Json, Writes}

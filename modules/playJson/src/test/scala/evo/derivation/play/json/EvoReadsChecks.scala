@@ -137,7 +137,6 @@ object CheckData:
         case Authorized(login: String)
         case Anonymous
         case Admin(login: String, @Rename("access") rights: String)
-    end User
 
     val authorized = User.Authorized("ololo")
 
@@ -153,7 +152,6 @@ object CheckData:
     enum Mode derives Config, EvoReads, EvoWrites:
         @Rename("r") case Read(@Rename("b") bin: Boolean)
         @Rename("w") case Write(append: Boolean = false, bin: Boolean)
-    end Mode
 
     val readJson = s"""{"mode": "r", "b": false}"""
 
@@ -174,7 +172,6 @@ object CheckData:
     enum BinTree derives Config, EvoReads, EvoWrites:
         case Branch(value: Int, left: BinTree, right: BinTree)
         case Nil
-    end BinTree
 
     val binTreeJson = """{
             "kind" : "branch",
@@ -201,5 +198,4 @@ object CheckData:
         def reads(json: JsValue): JsResult[Option[A]] = json match
             case JsNull => JsSuccess(None)
             case other  => other.validate[A].map(Some(_))
-    end given
 end CheckData
