@@ -131,5 +131,4 @@ object EvoObjectEncoder:
     class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation])
         extends EvoObjectEncoder[A]:
         def encodeObject(a: A): JsonObject = enc.encodeObject(nt.to(a))
-    end NewtypeEncoder
 end EvoObjectEncoder
