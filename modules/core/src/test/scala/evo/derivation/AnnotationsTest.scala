@@ -7,7 +7,7 @@ class AnnotationsTest extends munit.FunSuite:
     test("isbuzhka") {
         val cfg = summon[Config[Izbushka]]
         assertEquals(cfg.top.fields("hutHut").name, "hut_hut")
-        assertEquals(cfg.top.fields("ping"), ForField(name = "pong"))
+        assertEquals(cfg.top.fields("ping"), ForField(name = "pong", annotations = Vector(Rename("pong"))))
         assert(cfg.top.fields("azaza").embed)
     }
 
@@ -22,7 +22,7 @@ class AnnotationsTest extends munit.FunSuite:
     test("pech") {
         val cfg = summon[Config[Pech]]
         assertEquals(cfg.top.name, "Pech")
-        assertEquals(cfg.top.fields("Ivan"), ForField(name = "ivan"))
+        assertEquals(cfg.top.fields("Ivan"), ForField(name = "ivan", annotations = Vector(SnakeCase())))
         assertEquals(cfg.top.fields("Durak").name, "Durak")
     }
 
@@ -31,8 +31,8 @@ class AnnotationsTest extends munit.FunSuite:
         assertEquals(
           cfg.top.fields,
           Map(
-            "tridesatoyeGosudarstvo"  -> ForField(name = "TridesatoyeGosudarstvo"),
-            "tridevyatoyeGosudarstvo" -> ForField(name = "tridevyatoye-gosudarstvo"),
+            "tridesatoyeGosudarstvo"  -> ForField(name = "TridesatoyeGosudarstvo", annotations = Vector(PascalCase())),
+            "tridevyatoyeGosudarstvo" -> ForField(name = "tridevyatoye-gosudarstvo", annotations = Vector(KebabCase())),
           ),
         )
     }
