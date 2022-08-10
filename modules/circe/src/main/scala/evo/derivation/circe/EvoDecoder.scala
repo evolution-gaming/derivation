@@ -114,7 +114,7 @@ object EvoDecoder:
                                          .toFailure(s"constructor $subRenamed not found expected one of: $all")
                 sub               <- subDecoders
                                          .get(subName)
-                                         .toFailure(s"Internal error: should not happend, could not found $subName constructor info")
+                                         .toFailure(s"Internal error: should not happen, could not found $subName constructor info")
                 result            <- sub.tryDecode(down)
             yield result
     end SumDecoder
