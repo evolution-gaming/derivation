@@ -10,6 +10,7 @@ trait ValueClass[A]:
 
     def to(value: A): Representation
     def from(repr: Representation): A
+end ValueClass
 
 object ValueClass:
     transparent inline given derived[A]: ValueClass[A] = ${ derivedMacro[A] }
@@ -56,6 +57,8 @@ private class ValueClassMacro[A: Type](using q: Quotes):
                         def to(value: A): Representation = $toRepr(value)
                     }
                 }
+        end match
+    end result
 
     private def fromExpr[Repr: Type](repr: Expr[Repr]): Expr[A] =
 
@@ -75,6 +78,7 @@ private class ValueClassMacro[A: Type](using q: Quotes):
         val ref = Select(Ident(TermRef(prefix, aType.name)), apply)
 
         Apply(ref, List(repr.asTerm)).asExpr.asExprOf[A]
+    end fromExpr
 
     private def toExpr[Repr: Type](value: Expr[A]): Expr[Repr] =
         val term = value.asTerm
@@ -82,6 +86,8 @@ private class ValueClassMacro[A: Type](using q: Quotes):
         val valueField = term.symbol.declaredField(name)
 
         Select(term, valueField).asExpr.asExprOf[Repr]
+    end toExpr
+end ValueClassMacro
 
 trait IntValueClass[A] extends ValueClass[A]:
     type Representation <: Int
@@ -89,6 +95,7 @@ trait IntValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end IntValueClass
 
 trait LongValueClass[A] extends ValueClass[A]:
     type Representation <: Long
@@ -96,6 +103,7 @@ trait LongValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end LongValueClass
 
 trait ShortValueClass[A] extends ValueClass[A]:
     type Representation <: Short
@@ -103,6 +111,7 @@ trait ShortValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end ShortValueClass
 
 trait ByteValueClass[A] extends ValueClass[A]:
     type Representation <: Byte
@@ -110,6 +119,7 @@ trait ByteValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end ByteValueClass
 
 trait BooleanValueClass[A] extends ValueClass[A]:
     type Representation <: Boolean
@@ -117,6 +127,7 @@ trait BooleanValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end BooleanValueClass
 
 trait DoubleValueClass[A] extends ValueClass[A]:
     type Representation <: Double
@@ -124,6 +135,7 @@ trait DoubleValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end DoubleValueClass
 
 trait FloatValueClass[A] extends ValueClass[A]:
     type Representation <: Float
@@ -131,3 +143,4 @@ trait FloatValueClass[A] extends ValueClass[A]:
     def to(value: A): Representation
 
     def from(repr: Representation): A
+end FloatValueClass

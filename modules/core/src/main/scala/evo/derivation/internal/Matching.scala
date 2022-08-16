@@ -21,3 +21,5 @@ object Matching:
             else if matchers(i).asInstanceOf[TypeTest[A, A]].unapply(a).isDefined then names(i).asInstanceOf[String]
             else go(i + 1)
         go(0)
+    end find
+end Matching

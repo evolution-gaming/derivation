@@ -1,9 +1,10 @@
 package evo.derivation.circe
 
 import io.circe.Decoder
-import evo.derivation.Config
-import scala.compiletime.{summonFrom, erasedValue, summonInline}
+
+import scala.compiletime.{erasedValue, summonFrom, summonInline}
 import evo.derivation.internal.underiveableError
+
 import scala.deriving.Mirror
 import evo.derivation.LazySummon.LazySummonByInstance
 import evo.derivation.LazySummon.LazySummonByConfig
@@ -11,13 +12,13 @@ import evo.derivation.LazySummon
 import io.circe.Encoder
 import evo.derivation.internal.tupleFromProduct
 import io.circe.Json
-import evo.derivation.Config.FieldInfo
-import io.circe.syntax._
+import io.circe.syntax.*
 import io.circe.JsonObject.apply
 import io.circe.JsonObject
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
+import evo.derivation.config.{Config, ForField}
 
 trait EvoEncoder[A] extends Encoder[A]
 
@@ -44,6 +45,7 @@ object EvoEncoder:
         val names = mirroredNames[A]
 
         new SumEncoder[A](fieldInstances.toMap(names))
+    end deriveForSum
 
     private[circe] inline def deriveForProduct[A](using
         mirror: Mirror.ProductOf[A],
@@ -52,6 +54,7 @@ object EvoEncoder:
             LazySummon.all[mirror.MirroredElemLabels, A, Encoder, EvoEncoder, mirror.MirroredElemTypes]
 
         ProductEncoder[A](using mirror)(using summonInline[A <:< Product])(fieldInstances)
+    end deriveForProduct
 
     private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoEncoder[A] =
         given Encoder[nt.Representation] = summonInline
@@ -62,7 +65,7 @@ object EvoEncoder:
         fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
     ) extends LazySummonByConfig[EvoObjectEncoder, A]:
 
-        private def encodeField(info: FieldInfo, json: Json): Vector[(String, Json)] =
+        private def encodeField(info: ForField, json: Json): Vector[(String, Json)] =
             json.asObject match
                 case Some(obj) if info.embed => obj.toVector
                 case _                       => Vector(info.name -> json)
@@ -72,10 +75,11 @@ object EvoEncoder:
             a =>
                 val fields = tupleFromProduct(a)
                 type Res = Vector[(String, Json)]
-                val results = fieldInstances.useCollect[Res, FieldInfo](fields, infos)(
-                  [X] => (info: FieldInfo, a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
+                val results = fieldInstances.useCollect[Res, ForField](fields, infos)(
+                  [X] => (info: ForField, a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
                 )
                 JsonObject.fromIterable(results.flatten)
+        end instance
 
     end ProductEncoder
 
@@ -98,6 +102,8 @@ object EvoEncoder:
                     (field -> Json.fromString(discrimValue)) +: obj
                 case None               =>
                     JsonObject.singleton(discrimValue, json)
+            end match
+        end encodeObject
 
     end SumEncoder
 
@@ -125,3 +131,4 @@ object EvoObjectEncoder:
     class NewtypeEncoder[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation])
         extends EvoObjectEncoder[A]:
         def encodeObject(a: A): JsonObject = enc.encodeObject(nt.to(a))
+end EvoObjectEncoder

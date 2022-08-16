@@ -1,8 +1,8 @@
 package evo.derivation.circe
 
 import io.circe.Decoder
+
 import scala.deriving.Mirror
-import evo.derivation.Config
 import scala.compiletime.*
 import evo.derivation.internal.underiveableError
 import io.circe.DecodingFailure
@@ -10,16 +10,18 @@ import io.circe.Encoder
 import io.circe.HCursor
 import cats.data.Validated
 import cats.data.NonEmptyList
-import evo.derivation.Config.FieldInfo
+
 import java.awt.Cursor
 import scala.collection.immutable.Iterable
 import evo.derivation.LazySummon
 import evo.derivation.LazySummon.LazySummonByConfig
+
 import java.util.Arrays
 import io.circe.ACursor
 import io.circe.Decoder.Result
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
+import evo.derivation.config.{Config, ForField}
 
 trait EvoDecoder[A] extends Decoder[A]
 
@@ -48,6 +50,7 @@ object EvoDecoder:
         val names          = mirroredNames[A]
 
         SumDecoder(config, mirror)(constInstances.toMap[A](names), names)
+    end deriveForSum
 
     private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoDecoder[A] =
         given Decoder[nt.Representation] = summonInline
@@ -77,9 +80,10 @@ object EvoDecoder:
 
             private def onField(
                 cur: HCursor,
-            )(decoder: LazySummon.Of[Decoder], info: FieldInfo): Decoder.Result[decoder.FieldType] =
+            )(decoder: LazySummon.Of[Decoder], info: ForField): Decoder.Result[decoder.FieldType] =
                 val cursor = if info.embed then cur else cur.downField(info.name)
                 decoder.use(cursor.as[decoder.FieldType])
+            end onField
 
             def apply(cur: HCursor): Decoder.Result[A] =
                 fieldInstances.useEitherFast(infos)(onField(cur)) match
@@ -91,6 +95,7 @@ object EvoDecoder:
                     case Left(head +: rest) => Validated.Invalid(NonEmptyList(head, rest.toList))
                     case Left(_)            => Validated.invalidNel(DecodingFailure("unknown error", Nil))
                     case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
+    end ProductDecoder
 
     class SumDecoder[A](config: => Config[A], mirror: Mirror.SumOf[A])(
         mkSubDecoders: => Map[String, Decoder[A]],
@@ -109,9 +114,11 @@ object EvoDecoder:
                                          .toFailure(s"constructor $subRenamed not found expected one of: $all")
                 sub               <- subDecoders
                                          .get(subName)
-                                         .toFailure(s"Internal error: should not happend, could not found $subName constructor info")
+                                         .toFailure(s"Internal error: should not happen, could not found $subName constructor info")
                 result            <- sub.tryDecode(down)
             yield result
+    end SumDecoder
 
     class NewtypeDecoder[A](using nt: ValueClass[A])(using enc: Decoder[nt.Representation]) extends EvoDecoder[A]:
         override def apply(c: HCursor): Result[A] = c.as[nt.Representation].map(nt.from)
+end EvoDecoder

@@ -1,5 +1,7 @@
 package evo.derivation
 
+import evo.derivation.config.Config
+
 import scala.annotation.StaticAnnotation
 
 sealed trait DerivationAnnotation extends StaticAnnotation
@@ -40,3 +42,7 @@ case class Rename(name: String) extends DerivationAnnotation
 
 /** this field content will be flattened */
 case class Embed() extends DerivationAnnotation
+
+/** Custom transformation for user extensions */
+class Custom extends DerivationAnnotation:
+    def apply[A](config: Config[A]): Config[A] = config

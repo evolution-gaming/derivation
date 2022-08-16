@@ -1,6 +1,5 @@
 package evo.derivation.play.json
 
-import evo.derivation.Config
 import evo.derivation.Discriminator
 import evo.derivation.Embed
 import evo.derivation.LazySummon.LazySummonByConfig
@@ -22,6 +21,7 @@ import scala.compiletime.testing.Error
 import scala.compiletime.testing.typeCheckErrors
 import CheckData.TestClass
 import CheckData.*
+import evo.derivation.config.Config
 import play.api.libs.json.*
 import play.api.libs.json.given
 import play.api.libs.json.Json
@@ -70,6 +70,7 @@ class EvoReadsChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(decode[BinTree](binTreeJson), Right(binTree))
     }
+end EvoReadsChecks
 
 class EvoEncoderChecks extends FunSuite:
 
@@ -100,6 +101,7 @@ class EvoEncoderChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(parse(binTreeJson), Right(binTree.asJson))
     }
+end EvoEncoderChecks
 
 object CheckData:
     class TestClass derives Config
@@ -196,3 +198,4 @@ object CheckData:
         def reads(json: JsValue): JsResult[Option[A]] = json match
             case JsNull => JsSuccess(None)
             case other  => other.validate[A].map(Some(_))
+end CheckData

@@ -1,6 +1,6 @@
 package evo.derivation.play.json
 
-import evo.derivation.Config
+import evo.derivation.config.Config
 import play.api.libs.json.*
 
 trait EvoFormat[A] extends EvoWrites[A] with EvoReads[A] with Format[A]

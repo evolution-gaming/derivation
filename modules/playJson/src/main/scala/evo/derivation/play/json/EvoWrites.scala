@@ -1,22 +1,19 @@
 package evo.derivation.play.json
 
-import evo.derivation.Config
-import scala.compiletime.{summonFrom, erasedValue, summonInline}
+import scala.compiletime.{erasedValue, summonFrom, summonInline}
 import evo.derivation.internal.underiveableError
+
 import scala.deriving.Mirror
 import evo.derivation.LazySummon.LazySummonByInstance
 import evo.derivation.LazySummon.LazySummonByConfig
 import evo.derivation.LazySummon
 import evo.derivation.LazySummon.useCollect
-
 import evo.derivation.internal.tupleFromProduct
-
-import evo.derivation.Config.FieldInfo
-
 import EvoWrites.SumWrites
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
+import evo.derivation.config.{Config, ForField}
 import play.api.libs.json.*
 import play.api.libs.json.Writes
 
@@ -45,6 +42,7 @@ object EvoWrites:
         val names = mirroredNames[A]
 
         new SumWrites[A](fieldInstances.toMap(names))
+    end deriveForSum
 
     private[json] inline def deriveForProduct[A](using
         mirror: Mirror.ProductOf[A],
@@ -53,6 +51,7 @@ object EvoWrites:
             LazySummon.all[mirror.MirroredElemLabels, A, Writes, EvoWrites, mirror.MirroredElemTypes]
 
         ProductWritesMake[A](using mirror)(using summonInline[A <:< Product])(fieldInstances)
+    end deriveForProduct
 
     private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoWrites[A] =
         given Writes[nt.Representation] = summonInline
@@ -63,7 +62,7 @@ object EvoWrites:
         fieldInstances: LazySummon.All[Writes, mirror.MirroredElemTypes],
     ) extends LazySummonByConfig[EvoWrites, A]:
 
-        private def encodeField(info: FieldInfo, json: JsValue): Vector[(String, JsValue)] =
+        private def encodeField(info: ForField, json: JsValue): Vector[(String, JsValue)] =
             json.validate[JsObject].asOpt match
                 case Some(obj) if info.embed => obj.value.toVector
                 case _                       => Vector(info.name -> json)
@@ -73,10 +72,11 @@ object EvoWrites:
             a =>
                 val fields = tupleFromProduct(a)
                 type Res = Vector[(String, JsValue)]
-                val results = fieldInstances.useCollect[Res, FieldInfo](fields, infos)(
-                  [X] => (info: FieldInfo, a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
+                val results = fieldInstances.useCollect[Res, ForField](fields, infos)(
+                  [X] => (info: ForField, a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
                 )
                 JsObject(results.flatten)
+        end instance
 
     end ProductWritesMake
 
@@ -97,6 +97,8 @@ object EvoWrites:
                     obj + (field -> JsString(discrimValue))
                 case None               =>
                     JsObject.apply(Seq(discrimValue -> json))
+            end match
+        end writes
     end SumWrites
 
     class NewtypeWrites[A](using nt: ValueClass[A])(using enc: Writes[nt.Representation]) extends EvoWrites[A]:
