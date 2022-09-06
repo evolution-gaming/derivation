@@ -1,5 +1,5 @@
 object Version {
-    val scala = "3.1.3"
+    val scala = "3.2.0"
 
     val circe = "0.15.0-M1"
 
