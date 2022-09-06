@@ -25,7 +25,8 @@ Finally, define your own type, which derives circe instances
 ```scala
 import evo.derivation.*
 import evo.derivation.circe.*
-
+import evo.derivation.config.Config
+import java.util.UUID
 
 @SnakeCase
 @Discriminator("type")
