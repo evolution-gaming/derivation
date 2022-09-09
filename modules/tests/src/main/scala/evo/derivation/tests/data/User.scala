@@ -6,16 +6,19 @@ import evo.derivation.circe.{EvoDecoder, EvoEncoder}
 import evo.derivation.config.Config
 import evo.derivation.play.json.{EvoReads, EvoWrites}
 
+
+final case class Login(value: String) extends AnyVal derives Config, EvoDecoder, EvoEncoder, EvoReads, EvoWrites, EvoEq
+
 enum User derives Config, EvoDecoder, EvoEncoder, EvoReads, EvoWrites, EvoEq:
-    case Authorized(login: String)
+    case Authorized(login: Login)
     case Anonymous
-    case Admin(login: String, @Rename("access") rights: String)
+    case Admin(login: Login, @Rename("access") rights: String)
 
 object User:
 
-    val authorized = User.Authorized("ololo")
+    val authorized = User.Authorized(Login("ololo"))
 
-    val admin = User.Admin("ololo", "kek")
+    val admin = User.Admin(Login("ololo"), "kek")
 
     val authorizedJson = s"""{"Authorized" : {"login": "ololo"}}"""
 

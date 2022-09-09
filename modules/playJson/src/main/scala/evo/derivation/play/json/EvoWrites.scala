@@ -54,9 +54,9 @@ object EvoWrites:
     end deriveForProduct
 
     private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoWrites[A] =
-        given Writes[nt.Representation] = summonInline
+        val writes: Writes[nt.Representation] = summonInline
 
-        NewtypeWrites[A]()
+        NewtypeWrites[A](using nt)(using writes)
 
     class ProductWritesMake[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
         fieldInstances: LazySummon.All[Writes, mirror.MirroredElemTypes],
