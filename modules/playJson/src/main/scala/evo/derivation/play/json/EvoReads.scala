@@ -57,8 +57,8 @@ object EvoReads:
     end deriveForSum
 
     private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoReads[A] =
-        given Reads[nt.Representation] = summonInline
-        NewtypeReads[A]()
+        val reads: Reads[nt.Representation] = summonInline
+        NewtypeReads[A](using nt)(using reads)
 
     inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoReads, A] = deriveForProduct[A]
 

@@ -62,9 +62,9 @@ object EvoEq:
     end deriveForSum
 
     private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoEq[A] =
-        given Requirement[nt.Representation] = summonInline
+        val requirement: Requirement[nt.Representation] = summonInline
 
-        ValueClasEq[A]()
+        ValueClasEq[A](using nt)(using requirement)
 
     class ProductEq[A](mirror: Mirror.ProductOf[A])(using A <:< Product)(
         instances: LazySummon.All[Requirement, mirror.MirroredElemTypes],

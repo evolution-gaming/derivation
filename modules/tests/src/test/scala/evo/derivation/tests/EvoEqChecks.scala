@@ -20,9 +20,9 @@ class EvoEqChecks extends FunSuite:
 
     test("plain coproduct") {
         assert(User.authorized === User.authorized)
-        assert(User.authorized =!= User.Authorized("kekeke"))
+        assert(User.authorized =!= User.Authorized(Login("kekeke")))
 
-        def admin = User.Admin("jane", "titan")
+        def admin = User.Admin(Login("jane"), "titan")
         assert(User.Anonymous === User.Anonymous)
         assert(User.authorized =!= User.Anonymous)
         assert(admin === admin)

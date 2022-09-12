@@ -53,9 +53,9 @@ object EvoDecoder:
     end deriveForSum
 
     private inline def deriveForValueClass[A](using nt: ValueClass[A]): EvoDecoder[A] =
-        given Decoder[nt.Representation] = summonInline
+        val decoder: Decoder[nt.Representation] = summonInline
 
-        NewtypeDecoder[A]()
+        NewtypeDecoder[A](using nt)(using decoder)
 
     extension [A](oa: Option[A])
         private def toFailure(s: => String): Decoder.Result[A] = oa.toRight(DecodingFailure(s, Nil))

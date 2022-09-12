@@ -57,9 +57,9 @@ object EvoEncoder:
     end deriveForProduct
 
     private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoEncoder[A] =
-        given Encoder[nt.Representation] = summonInline
+        val encoder: Encoder[nt.Representation] = summonInline
 
-        NewtypeEncoder[A]()
+        NewtypeEncoder[A](using nt)(using encoder)
 
     class ProductEncoder[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
         fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
