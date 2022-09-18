@@ -8,15 +8,22 @@ import evo.derivation.circe
 import evo.derivation.circe.deriveEnumerationCodec
 import io.circe.Codec
 
-enum Animal:
-    case Dog, Cat
-
+sealed trait Animal
 object Animal:
-    given Codec[Animal]       = deriveEnumerationCodec[Animal]
-    val example: List[Animal] = List(Animal.Dog, Animal.Cat)
+    sealed trait Mammal  extends Animal
+    sealed trait Reptile extends Animal
+
+    case object Dog    extends Mammal
+    case object Cat    extends Mammal
+    case object Turtle extends Reptile
+
+    given Codec[Animal] = deriveEnumerationCodec[Animal]
+
+    val example: List[Animal] = List(Dog, Cat, Turtle)
     val exampleJson           =
         """[
-          |  "Dog",
-          |  "Cat"
-          |]""".stripMargin
+        |  "Dog",
+        |  "Cat",
+        |  "Turtle"
+        |]""".stripMargin
 end Animal
