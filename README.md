@@ -8,19 +8,25 @@ A derivation library for scala 3 with annotation based configuration.
 
 ## Usage
 
-add library to your project as 
-
+This library os being published to the [https://evolution.jfrog.io/](https://evolution.jfrog.io/). In order to consume it, add [sbt artifactory plugin](https://github.com/evolution-gaming/sbt-artifactory-plugin) 
 ```sbt
-libraryDependencies += "com.evolution" %% "evo-derivation-circe" % "{version}"
+addSbtPlugin("com.evolution" % "sbt-artifactory-plugin" % "0.0.2")
 ```
 
-Then define your own type, deriving circe instances
+Then, add library to your project as
+
+```sbt
+libraryDependencies += "com.evolution" %% "derivation-circe" % "{version}"
+```
+
+Finally, define your own type, which derives circe instances
 
 
 ```scala
 import evo.derivation.*
 import evo.derivation.circe.*
-
+import evo.derivation.config.Config
+import java.util.UUID
 
 @SnakeCase
 @Discriminator("type")
