@@ -19,8 +19,8 @@ val testDependencies = libraryDependencies ++= Vector(
   "org.scalameta" %% "munit" % Version.munit % Test,
 )
 
-lazy val publishUserName = sys.env.getOrElse("ARTIFACTORY_PUBLISH_USERNAME", "")
-lazy val publishPass     = sys.env.getOrElse("ARTIFACTORY_PUBLISH_PASS", "")
+lazy val publishUserName = sys.env.getOrElse("SONATYPE_USER", "")
+lazy val publishPass     = sys.env.getOrElse("SONATYPE_PASS", "")
 
 lazy val releasesRepo = MavenRepository(
   s"artifactory-evolution-maven-local-releases",
@@ -56,8 +56,8 @@ lazy val publishSettings = Vector(
   credentials += {
       if (publishUserName.nonEmpty)
           Credentials(
-            realm = "Artifactory Realm",
-            host = "evolution.jfrog.io",
+            realm = "Sonatype Nexus Repository Manager",
+            host = "oss.sonatype.org",
             userName = publishUserName,
             passwd = publishPass,
           )
