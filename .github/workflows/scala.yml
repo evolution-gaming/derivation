@@ -74,6 +74,8 @@ jobs:
 
       - name: Publish artifacts
         env:
-          ARTIFACTORY_PUBLISH_USERNAME: ${{ secrets.ARTIFACTORY_PUBLISH_USERNAME }}
-          ARTIFACTORY_PUBLISH_PASS: ${{ secrets.ARTIFACTORY_PUBLISH_PASS }}
-        run: sbt publish
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USER }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASS }}
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+        run: sbt ci-release
