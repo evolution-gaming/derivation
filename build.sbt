@@ -19,19 +19,6 @@ val testDependencies = libraryDependencies ++= Vector(
   "org.scalameta" %% "munit" % Version.munit % Test,
 )
 
-lazy val publishUserName = sys.env.getOrElse("ARTIFACTORY_PUBLISH_USERNAME", "")
-lazy val publishPass     = sys.env.getOrElse("ARTIFACTORY_PUBLISH_PASS", "")
-
-lazy val releasesRepo = MavenRepository(
-  s"artifactory-evolution-maven-local-releases",
-  s"https://evolution.jfrog.io/artifactory/maven-local-releases",
-)
-
-lazy val snapshotsRepo = MavenRepository(
-  s"artifactory-evolution-maven-local-snapshots",
-  s"https://evolution.jfrog.io/artifactory/maven-local-snapshots",
-)
-
 lazy val publishSettings = Vector(
   homepage                := Some(url("https://github.com/evolution-gaming/derivation")),
   developers              := List(
@@ -50,20 +37,6 @@ lazy val publishSettings = Vector(
   ),
   publishMavenStyle       := true,
   Test / publishArtifact  := false,
-  publishTo               := Some {
-      if (isSnapshot.value) snapshotsRepo else releasesRepo
-  },
-  credentials += {
-      if (publishUserName.nonEmpty)
-          Credentials(
-            realm = "Artifactory Realm",
-            host = "evolution.jfrog.io",
-            userName = publishUserName,
-            passwd = publishPass,
-          )
-      else
-          Credentials(Path.userHome / ".sbt" / "evo.credentials")
-  },
   versionScheme           := Some("early-semver"),
   git.baseVersion         := "0.1",
   git.formattedShaVersion :=
