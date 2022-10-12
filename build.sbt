@@ -13,6 +13,7 @@ val scala3Settings = scalacOptions ++= Vector(
   "-Yexplicit-nulls",
   "-encoding",
   "utf-8",
+  "-Yshow-suppressed-errors",
 )
 
 val testDependencies = libraryDependencies ++= Vector(

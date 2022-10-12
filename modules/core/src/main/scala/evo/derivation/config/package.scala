@@ -18,6 +18,7 @@ case class Annotations(
     forType: Vector[DA],
     byField: Map[String, Vector[DA]],
     fields: Vector[String],
+    isSingleton: Boolean,
 )
 
 case class AllAnnotations(

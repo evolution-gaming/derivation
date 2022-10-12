@@ -3,6 +3,7 @@ package evo.derivation.config
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type, Varargs}
+import evo.derivation.internal.showFlags
 
 class ConfigMacro(using q: Quotes):
 
@@ -29,12 +30,16 @@ class ConfigMacro(using q: Quotes):
         '{ $name -> Vector($annots: _*) }
     end fieldAnnotations
 
+    private val isVal: PartialFunction[Tree, Unit] =
+        case _: ValDef => ()
+
     private def topAnnotations(sym: Symbol): Expr[Annotations] =
-        val topAnns    = Varargs(sym.annotations.flatMap(annotationTree))
-        val caseParams = sym.primaryConstructor.paramSymss.take(1).flatten
-        val fields     = Varargs(caseParams.map(sym => Expr(sym.name)))
-        val fieldAnns  = Varargs(caseParams.map(fieldAnnotations))
-        val name       = Expr(sym.name)
+        val topAnns     = Varargs(sym.annotations.flatMap(annotationTree))
+        val caseParams  = sym.primaryConstructor.paramSymss.take(1).flatten
+        val fields      = Varargs(caseParams.map(sym => Expr(sym.name)))
+        val fieldAnns   = Varargs(caseParams.map(fieldAnnotations))
+        val name        = Expr(sym.name)
+        val isSingleton = Expr(isVal.isDefinedAt(sym.tree))
 
         '{
             Annotations(
@@ -42,6 +47,7 @@ class ConfigMacro(using q: Quotes):
               forType = Vector($topAnns: _*),
               byField = Map($fieldAnns: _*),
               fields = Vector($fields: _*),
+              isSingleton = $isSingleton,
             )
         }
     end topAnnotations

@@ -2,6 +2,8 @@ package evo.derivation
 
 import AnnotationTest.{Baba, Gosudarstvo, Izbushka, Pech}
 import evo.derivation.config.{Config, ForField}
+import scala.CanEqual.derived
+import evo.derivation.AnnotationTest.Gorynych
 
 class AnnotationsTest extends munit.FunSuite:
     test("isbuzhka") {
@@ -17,6 +19,15 @@ class AnnotationsTest extends munit.FunSuite:
         assertEquals(cfg.constructors("Yaga").name, "Jaga")
         assertEquals(cfg.constructors("Noga").fields("rightLeg").name, "right_leg")
         assertEquals(cfg.constructors("Kostyanaya").fields("kekJi").name, "kek_ji")
+
+    }
+
+    test("baba singleton flag") {
+        val cfg = summon[Config[Baba]]
+        assert(!cfg.top.isSingleton, "enum Baba is not a singleton")
+        assert(cfg.constructors("FooFoo").isSingleton, "case object FooFoo is a singleton")
+        assert(cfg.constructors("Yaga").isSingleton, "case object Yaga is a singleton")
+        assert(!cfg.constructors("Kostyanaya").isSingleton, "case class Kostyanaya is not a singleton")
     }
 
     test("pech") {
@@ -36,6 +47,13 @@ class AnnotationsTest extends munit.FunSuite:
           ),
         )
     }
+
+    test("simple enum flag") {
+        assert(!summon[Config[Izbushka]].isSimpleEnum, "case class is not a simple enum")
+        assert(!summon[Config[Baba]].isSimpleEnum, "enum with non-object cases is not a simple enum")
+        assert(summon[Config[Gorynych]].isSimpleEnum, "enum with only object cases is a simple enum")
+    }
+
 end AnnotationsTest
 
 object AnnotationTest:
@@ -63,4 +81,7 @@ object AnnotationTest:
         @PascalCase() tridesatoyeGosudarstvo: String,
         @KebabCase() tridevyatoyeGosudarstvo: String,
     ) derives Config
+
+    enum Gorynych derives Config:
+        case FirstHead, SecondHead, ThirdHead
 end AnnotationTest
