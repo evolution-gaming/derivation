@@ -59,7 +59,7 @@ trait Template:
         config: => Config[A],
         mirror: Mirror.ProductOf[A],
     ): Provide[A] =
-        type F[A] = OfField[A]    
+        type F[A] = OfField[A]
 
         val fieldInstances =
             LazySummon.all[mirror.MirroredElemLabels, A, F, Provide, mirror.MirroredElemTypes]
