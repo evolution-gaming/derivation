@@ -3,32 +3,62 @@ package evo.derivation.template
 import scala.deriving.Mirror
 import scala.compiletime.{summonInline, summonFrom}
 import evo.derivation.LazySummon
-import Template.Typeclass
 import evo.derivation.config.Config
 import evo.derivation.internal.{Matching, mirroredNames, underiveableError}
 import evo.derivation.ValueClass
 import evo.derivation.LazySummon.LazySummonByConfig
 
-/** a template for simple instance derivation */
+/** template for simple instance derivation you can mix this trait into your companion object and get relatively easy
+  * derivation template define your types, implement product, sum and newtype
+  *
+  * see EvoDecoder as an example
+  *
+  * ATTENTION: to be able to derive automaticall instances for inner cases of enums you should add something like this
+  * {{{
+  *     inline given [A: Mirror.ProductOf]: LazySummonByConfig[YourTypeclass, A] = lazySummonForProduct
+  * }}}
+  */
 trait Template:
+    /** resulting typeclass, usually equvalent to the type, your companion is bound
+      */
     type Provide[A]
+
+    /** requirement typeclass for the each of the object fields
+      */
     type OfField[A]
+
+    /** requirement typeclass for the each of the enum subtypes
+      */
     type OfSubtype[A]
+
+    /** requirement typeclass for base type wrapped in new type or value class
+      */
     type OfNewtype[A]
 
+    /** called for the case classes derivation
+      */
     def product[A](using mirror: Mirror.ProductOf[A])(
         names: Vector[String],
         fields: LazySummon.All[OfField, mirror.MirroredElemTypes],
     )(using => Config[A], A <:< Product): Provide[A]
 
+    /** called for the sealed trait \ enum derivation
+      *
+      * WARNING: mkSubMap makes assumption that you can use your subtype instances as instances for the target type, use
+      * with great caution!
+      */
     def sum[A](using mirror: Mirror.SumOf[A])(
         names: Vector[String],
         subs: LazySummon.All[OfSubtype, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, OfSubtype[A]],
     )(using config: => Config[A], matching: Matching[A]): Provide[A]
 
+    /** called for the newtype \ value class derivation
+      */
     def newtype[A](using nt: ValueClass[A])(using enc: OfNewtype[nt.Representation]): Provide[A]
 
+    /** this is the method that would be called when the derivation occurs you can redefine it to add some custom logic
+      */
     inline def derived[A](using config: => Config[A]): Provide[A] =
         summonFrom {
             case mirror: Mirror.ProductOf[A] => deriveForProduct[A]
@@ -74,11 +104,11 @@ trait Template:
 
 end Template
 
-object Template:
-    type Typeclass
-    type FieldTC <: Typeclass
-    type SubtypeTC <: Typeclass
-    type NewtypeTC <: Typeclass
-    type ProvideTC <: Typeclass
-
-end Template
+/** simplified trait, useful when your define derivation for your own typeclass
+  */
+trait HomogenicTemplate[TC[_]] extends Template:
+    type Provide[A]   = TC[A]
+    type OfField[A]   = TC[A]
+    type OfSubtype[A] = TC[A]
+    type OfNewtype[A] = TC[A]
+end HomogenicTemplate
