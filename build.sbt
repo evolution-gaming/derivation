@@ -19,6 +19,9 @@ val testDependencies = libraryDependencies ++= Vector(
   "org.scalameta" %% "munit" % Version.munit % Test,
 )
 
+ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
+ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
+
 lazy val publishSettings = Vector(
   homepage                := Some(url("https://github.com/evolution-gaming/derivation")),
   developers              := List(
@@ -35,8 +38,6 @@ lazy val publishSettings = Vector(
       url("https://github.com/FunFunFine"),
     ),
   ),
-  sonatypeCredentialHost  := "s01.oss.sonatype.org",
-  sonatypeRepository      := "https://s01.oss.sonatype.org/service/local",
   publishMavenStyle       := true,
   Test / publishArtifact  := false,
   versionScheme           := Some("early-semver"),
