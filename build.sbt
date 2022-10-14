@@ -44,6 +44,14 @@ lazy val publishSettings = Vector(
   git.baseVersion         := "0.1",
   git.formattedShaVersion :=
       git.gitHeadCommit.value map { sha => s"${git.baseVersion.value}-$sha-SNAPSHOT" },
+  description             := "A derivation library for scala 3 with annotation based configuration.",
+  scmInfo                 := Some(
+    ScmInfo(
+      url("https://github.com/evolution-gaming/derivation"),
+      "git@github.com:evolution-gaming/derivation.git",
+    ),
+  ),
+  licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
 )
 
 enablePlugins(GitVersioning)
