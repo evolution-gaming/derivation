@@ -5,7 +5,7 @@ object Version {
 
     val munit = "0.7.29"
 
-    val tapir = "1.1.2"
+    val tapir = "1.1.3"
 
     val playJson = "2.9.3"
 
