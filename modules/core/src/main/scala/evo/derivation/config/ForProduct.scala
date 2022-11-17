@@ -8,6 +8,7 @@ case class ForProduct(
     fieldNames: Vector[String] = Vector.empty,
     fields: Map[String, ForField] = Map.empty,
     annotations: Vector[DerivationAnnotation] = Vector.empty,
+    isSingleton: Boolean = false,
 ):
     lazy val fieldInfos = fieldNames.map(fields)
 

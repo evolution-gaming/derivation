@@ -41,6 +41,8 @@ case class Config[+T](
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
 
+    lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.values.forall(_.isSingleton)
+
 end Config
 
 object Config:
@@ -79,6 +81,7 @@ object Config:
           fieldNames = annotations.fields,
           fields = annotations.fields.map(name => name -> field(name)).toMap,
           annotations = annotations.forType,
+          isSingleton = annotations.isSingleton,
         )
     end basicProduct
 
