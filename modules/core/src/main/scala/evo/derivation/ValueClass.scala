@@ -20,14 +20,17 @@ object ValueClass:
 private class ValueClassMacro[A: Type](using q: Quotes):
     import q.reflect.*
 
-    private val aType = TypeRepr.of[A].typeSymbol
+    private val aType: Symbol = TypeRepr.of[A].typeSymbol
 
     if !aType.isClassDef && !aType.flags.is(Flags.Case) then
         report.errorAndAbort(s"${Type.show[A]} is not a case class")
 
+    private val paramPF =
+        ((_.tree): PartialFunction[Symbol, Tree]) andThen { case vd: ValDef => vd }
+
     private val ValDef(name, tpe, _) = aType.primaryConstructor.paramSymss match
-        case List(List(single)) => single.tree
-        case _                  => report.errorAndAbort("should contain a single field")
+        case List(List(paramPF(single))) => single
+        case _                           => report.errorAndAbort("should contain a single field")
 
     def result: Expr[ValueClass[A]] =
 

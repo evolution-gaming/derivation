@@ -28,6 +28,7 @@ case class Config[+T](
                 fieldName match
                     case None            => this
                     case Some(fieldName) => copy(top = top.embedField(fieldName))
+            case custom: Custom         => custom(this)
 
     def name(constructor: String): String =
         constructors.get(constructor).map(_.name).getOrElse(constructor)
