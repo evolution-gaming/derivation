@@ -8,12 +8,7 @@ A derivation library for scala 3 with annotation based configuration.
 
 ## Usage
 
-This library os being published to the [https://evolution.jfrog.io/](https://evolution.jfrog.io/). In order to consume it, add [sbt artifactory plugin](https://github.com/evolution-gaming/sbt-artifactory-plugin) 
-```sbt
-addSbtPlugin("com.evolution" % "sbt-artifactory-plugin" % "0.0.2")
-```
-
-Then, add library to your project as
+This library os being published to the macen central. Add library to your project as
 
 ```sbt
 libraryDependencies += "com.evolution" %% "derivation-circe" % "{version}"
