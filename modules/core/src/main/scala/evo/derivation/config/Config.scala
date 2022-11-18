@@ -28,6 +28,7 @@ case class Config[+T](
                 fieldName match
                     case None            => this
                     case Some(fieldName) => copy(top = top.embedField(fieldName))
+            case custom: Custom         => custom(this)
 
     def name(constructor: String): String =
         constructors.get(constructor).map(_.name).getOrElse(constructor)
@@ -39,6 +40,8 @@ case class Config[+T](
         constructors.get(name).fold(Config.named(name))(p => Config(top = p))
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
+
+    lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.values.forall(_.isSingleton)
 
 end Config
 
@@ -78,6 +81,7 @@ object Config:
           fieldNames = annotations.fields,
           fields = annotations.fields.map(name => name -> field(name)).toMap,
           annotations = annotations.forType,
+          isSingleton = annotations.isSingleton,
         )
     end basicProduct
 

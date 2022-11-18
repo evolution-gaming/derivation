@@ -9,7 +9,7 @@ import scala.reflect.ClassTag
 @implicitNotFound(
   "can't find given instance of ${TC} for ${A} that's required for field or constructor ${Name} of type ${From}",
 )
-trait LazySummon[+Name, +From, TC[_], +TCC[x] <: TC[x], A]:
+trait LazySummon[+Name, +From, TC[_], +TCC[x], A]:
     type FieldType = A
     def tc: TC[A]
 
@@ -21,7 +21,7 @@ end LazySummon
 object LazySummon:
     type Of[TC[_]] = LazySummon[_, _, TC, _, _]
 
-    type Applied[TC[_], TCC[x] <: TC[x], From, NR] = NR match
+    type Applied[TC[_], TCC[x], From, NR] = NR match
         case (name, req) => LazySummon[name, From, TC, TCC, req]
 
     opaque type All[TC[_], Fields <: Tuple] = IArray[Of[TC]]
@@ -42,7 +42,7 @@ object LazySummon:
         def tc: TC[A] = constructor.instance(using config.constructor(name.value).as[A])
     end given
 
-    inline def all[Names <: Tuple, From, TC[_], TCC[x] <: TC[x], Fields <: Tuple]: All[TC, Fields] =
+    inline def all[Names <: Tuple, From, TC[_], TCC[x], Fields <: Tuple]: All[TC, Fields] =
         type Summons = Tuple.Map[Tuple.Zip[Names, Fields], [A] =>> Applied[TC, TCC, From, A]]
         summonAll[Summons].toIArray.map(_.asInstanceOf[Of[TC]])
 
