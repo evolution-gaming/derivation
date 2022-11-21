@@ -5,6 +5,7 @@ import scala.annotation.implicitNotFound
 import scala.compiletime.{summonAll, uninitialized, erasedValue}
 import scala.reflect.ClassTag.apply
 import scala.reflect.ClassTag
+import internal.arrays.*
 
 @implicitNotFound(
   "can't find given instance of ${TC} for ${A} that's required for field or constructor ${Name} of type ${From}",
@@ -68,38 +69,47 @@ object LazySummon:
                 }
                 .toVector
 
-        def useEitherFast[Info, E](infos: Vector[Info])(
+        def useEitherFast[Info, E](infos: IArray[Info])(
             f: (summon: Of[TC], info: Info) => Either[E, summon.FieldType],
         ): Either[E, Fields] =
             var error: Left[E, Nothing] | Null = null
-            val elements                       = all.zip(infos).map[Any] { (inst, info) =>
+            var elements                       = IArray.newBuilder[Any]
+            all.forEachInline2(infos) { (inst, info) =>
                 f(inst, info) match
-                    case err @ Left(e) =>
+                    case err: Left[E, Any]     =>
                         error = err.asInstanceOf[Left[E, Nothing]]
-                        null
-                    case Right(a)      => a
+                        false
+                    case good: Right[Any, Any] =>
+                        elements += good.value
+                        true
             }
             error match
-                case null                 => Right(Tuple.fromIArray(elements).asInstanceOf[Fields])
+                case null                 =>
+                    Right(Tuple.fromIArray(elements.result()).asInstanceOf[Fields])
                 case err: Left[E, Fields] => err
         end useEitherFast
 
-        def useEithers[Info, E](infos: Vector[Info])(
+        def useEithers[Info, E](infos: IArray[Info])(
             f: (summon: Of[TC], info: Info) => Either[E, summon.FieldType],
         ): Either[Vector[E], Fields] =
             val errors   = Vector.newBuilder[E]
             var err      = false
-            val elements = all.zip(infos).map[Any] { (inst, info) =>
+            var elements = IArray.newBuilder[Any]
+
+            all.forEachInline2(infos) { (inst, info) =>
                 f(inst, info) match
-                    case Left(e)  =>
-                        err = true
+                    case Left(e)          =>
                         errors += e
-                        null
-                    case Right(a) => a
+                        err = true
+                        true
+                    case Right(a) if !err =>
+                        elements += a
+                        true
+                    case _                => true
             }
             if err
             then Left(errors.result)
-            else Right(Tuple.fromIArray(elements).asInstanceOf[Fields])
+            else Right(Tuple.fromIArray(elements.result()).asInstanceOf[Fields])
         end useEithers
 
         inline def toMap[A](names: Vector[String]): Map[String, TC[A]] =

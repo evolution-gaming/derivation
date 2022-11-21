@@ -102,11 +102,18 @@ trait Template:
 
 end Template
 
-/** simplified trait, useful when your define derivation for your own typeclass
+/** simplified trait, useful when your require the same typeclass in all cases
   */
-trait HomogenicTemplate[TC[_]] extends Template:
-    type Provide[A]   = TC[A]
+trait ConsistentTemplate[TC[_], Prov[_]] extends Template:
     type OfField[A]   = TC[A]
     type OfSubtype[A] = TC[A]
     type OfNewtype[A] = TC[A]
-end HomogenicTemplate
+    type Provide[A]   = Prov[A]
+end ConsistentTemplate
+
+/** event more simplified trait, useful when your define derivation for your own typeclass
+  */
+trait HomogenicTemplate[TC[_]] extends ConsistentTemplate[TC, TC]
+
+trait SummonForProduct extends Template:
+    inline given [A: Mirror.ProductOf]: LazySummonByConfig[Provide, A] = lazySummonForProduct

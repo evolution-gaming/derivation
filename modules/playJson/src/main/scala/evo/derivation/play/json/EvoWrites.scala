@@ -4,81 +4,61 @@ import scala.compiletime.{erasedValue, summonFrom, summonInline}
 import evo.derivation.internal.underiveableError
 
 import scala.deriving.Mirror
-import evo.derivation.LazySummon.LazySummonByInstance
-import evo.derivation.LazySummon.LazySummonByConfig
+import evo.derivation.LazySummon.{All, LazySummonByConfig, LazySummonByInstance, useCollect}
 import evo.derivation.LazySummon
-import evo.derivation.LazySummon.useCollect
 import evo.derivation.internal.tupleFromProduct
 import EvoWrites.SumWrites
 import evo.derivation.internal.Matching
 import evo.derivation.internal.mirroredNames
 import evo.derivation.ValueClass
 import evo.derivation.config.{Config, ForField}
+import evo.derivation.template.{ConsistentTemplate, SummonForProduct}
 import play.api.libs.json.*
 import play.api.libs.json.Writes
 
 trait EvoWrites[A] extends Writes[A]
 
-object EvoWrites:
-    inline def derived[A](using config: => Config[A]): EvoWrites[A] =
-        summonFrom {
-            case mirror: Mirror.ProductOf[A] => deriveForProduct[A].instance
-            case given Mirror.SumOf[A]       => deriveForSum[A]
-            case given ValueClass[A]         => deriveForNewtype[A]
-            case _                           => underiveableError[EvoWrites[A], A]
-        }
+object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonForProduct:
 
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoWrites, A] = deriveForProduct[A]
+    override def product[A](using mirror: Mirror.ProductOf[A])(
+        fields: All[Writes, mirror.MirroredElemTypes],
+    )(using => Config[A], A <:< Product): EvoWrites[A] =
+        ProductWrites(fields)
 
-    private[json] inline def deriveForSum[A](using
-        config: => Config[A],
-        mirror: Mirror.SumOf[A],
-    ): EvoWrites[A] =
-        given Matching[A] = Matching.create[A]
+    /** called for the sealed trait \ enum derivation
+      */
+    override def sum[A](using mirror: Mirror.SumOf[A])(
+        subs: All[Writes, mirror.MirroredElemTypes],
+        mkSubMap: => Map[String, Writes[A]],
+    )(using config: => Config[A], matching: Matching[A]): EvoWrites[A] =
+        SumWrites(mkSubMap)
 
-        val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Writes, EvoWrites, mirror.MirroredElemTypes]
+    /** called for the newtype \ value class derivation
+      */
+    override def newtype[A](using nt: ValueClass[A])(using write: Writes[nt.Representation]): EvoWrites[A] =
+        o => write.writes(nt.to(o))
 
-        val names = mirroredNames[A]
-
-        new SumWrites[A](fieldInstances.toMap(names))
-    end deriveForSum
-
-    private[json] inline def deriveForProduct[A](using
-        mirror: Mirror.ProductOf[A],
-    ): LazySummonByConfig[EvoWrites, A] =
-        val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, Writes, EvoWrites, mirror.MirroredElemTypes]
-
-        ProductWritesMake[A](using mirror)(using summonInline[A <:< Product])(fieldInstances)
-    end deriveForProduct
-
-    private inline def deriveForNewtype[A](using nt: ValueClass[A]): EvoWrites[A] =
-        val writes: Writes[nt.Representation] = summonInline
-
-        NewtypeWrites[A](using nt)(using writes)
-
-    class ProductWritesMake[A](using mirror: Mirror.ProductOf[A])(using A <:< Product)(
+    class ProductWrites[A](using mirror: Mirror.ProductOf[A], config: => Config[A])(using A <:< Product)(
         fieldInstances: LazySummon.All[Writes, mirror.MirroredElemTypes],
-    ) extends LazySummonByConfig[EvoWrites, A]:
+    ) extends EvoWrites[A]:
 
         private def encodeField(info: ForField, json: JsValue): Vector[(String, JsValue)] =
             json.validate[JsObject].asOpt match
                 case Some(obj) if info.embed => obj.value.toVector
                 case _                       => Vector(info.name -> json)
 
-        def instance(using config: => Config[A]): EvoWrites[A] =
-            lazy val infos = config.top.fields.map(_._2)
-            a =>
-                val fields = tupleFromProduct(a)
-                type Res = Vector[(String, JsValue)]
-                val results = fieldInstances.useCollect[Res, ForField](fields, infos)(
-                  [X] => (info: ForField, a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
-                )
-                JsObject(results.flatten)
-        end instance
+        lazy val infos = config.top.fields.map(_._2)
 
-    end ProductWritesMake
+        override def writes(a: A): JsValue =
+
+            val fields = tupleFromProduct(a)
+            type Res = Vector[(String, JsValue)]
+            val results = fieldInstances.useCollect[Res, ForField](fields, infos)(
+              [X] => (info: ForField, a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
+            )
+            JsObject(results.flatten)
+        end writes
+    end ProductWrites
 
     class SumWrites[A](
         mkSubWritess: => Map[String, Writes[A]],
@@ -100,8 +80,4 @@ object EvoWrites:
             end match
         end writes
     end SumWrites
-
-    class NewtypeWrites[A](using nt: ValueClass[A])(using enc: Writes[nt.Representation]) extends EvoWrites[A]:
-        def writes(o: A): JsValue = enc.writes(nt.to(o))
-
 end EvoWrites

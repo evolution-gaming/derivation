@@ -8,6 +8,7 @@ import evo.derivation.internal.{Matching, tupleFromProduct}
 import evo.derivation.template.Template
 import evo.derivation.{LazySummon, ValueClass}
 import io.circe.{Encoder, Json, JsonObject}
+import evo.derivation.template.SummonForProduct
 
 trait EvoEncoder[A] extends Encoder[A]
 
@@ -60,12 +61,10 @@ abstract class EvoTemplateEncoder extends Template:
         end encodeObject
 end EvoTemplateEncoder
 
-object EvoEncoder extends EvoTemplateEncoder:
+object EvoEncoder extends EvoTemplateEncoder with SummonForProduct:
     final type OfNewtype[A] = Encoder[A]
 
     final type Provide[A] = EvoEncoder[A]
-
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoEncoder, A] = lazySummonForProduct[A]
 
     def newtype[A](using nt: ValueClass[A])(using enc: Encoder[nt.Representation]): EvoEncoder[A] =
         a => enc(nt.to(a))
@@ -74,13 +73,11 @@ end EvoEncoder
 
 trait EvoObjectEncoder[A] extends EvoEncoder[A] with Encoder.AsObject[A]
 
-object EvoObjectEncoder extends EvoTemplateEncoder:
+object EvoObjectEncoder extends EvoTemplateEncoder with SummonForProduct:
     final type OfNewtype[A] = Encoder.AsObject[A]
 
     final type Provide[A] = EvoObjectEncoder[A]
-
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoObjectEncoder, A] = lazySummonForProduct[A]
-
+    
     def newtype[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation]): EvoObjectEncoder[A] =
         a => enc.encodeObject(nt.to(a))
 
