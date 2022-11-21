@@ -19,10 +19,9 @@ abstract class EvoTemplateEncoder extends Template:
     type Provide[A] >: EvoObjectEncoder[A] <: EvoEncoder[A]
 
     def product[A](using mirror: Mirror.ProductOf[A])(
-        names: Vector[String],
         fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
     )(using config: => Config[A], ev: A <:< Product): EvoObjectEncoder[A] = new:
-        lazy val infos = config.top.fieldInfos
+        lazy val infos = config.top.fields.map(_._2)
 
         private def encodeField(info: ForField, json: Json): Vector[(String, Json)] =
             json.asObject match
@@ -39,7 +38,6 @@ abstract class EvoTemplateEncoder extends Template:
         end encodeObject
 
     def sum[A](using mirror: Mirror.SumOf[A])(
-        names: Vector[String],
         subs: LazySummon.All[Encoder, mirror.MirroredElemTypes],
         mkEncoders: => Map[String, Encoder[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoObjectEncoder[A] = new:

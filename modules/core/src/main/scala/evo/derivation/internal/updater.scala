@@ -1,6 +1,7 @@
 package evo.derivation.internal
 
 import scala.quoted.*
+import scala.collection.SeqOps
 
 type Updater[C, A] = (A => A) => (C => C)
 
@@ -16,7 +17,15 @@ class MkUpdate[C <: Product]:
 
 def updateMap[K, V](key: K): Updater[Map[K, V], V] = f => _.updatedWith(key)(_.map(f))
 
+def filter[A](cond: A => Boolean): Updater[A, A] = f => a => if (cond(a)) f(a) else a
+
 def mapValues[K, V]: Updater[Map[K, V], V] = f => _.view.mapValues(f).toMap
+
+def mapItems[T[a] <: SeqOps[a, T, T[a]], I]: Updater[T[I], I] = f => _.map(f)
+
+def mapVector[I]: Updater[Vector[I], I] = mapItems
+
+def mapSecond[A, B]: Updater[(A, B), B] = f => { case (a, b) => (a, (f(b))) }
 
 private def updaterMacro[C: Type, A: Type](f: Expr[C => A])(using q: Quotes): Expr[(A => A) => C => C] =
     import q.reflect.*

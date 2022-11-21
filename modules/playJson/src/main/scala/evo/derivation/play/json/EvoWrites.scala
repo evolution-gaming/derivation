@@ -68,7 +68,7 @@ object EvoWrites:
                 case _                       => Vector(info.name -> json)
 
         def instance(using config: => Config[A]): EvoWrites[A] =
-            lazy val infos = config.top.fieldInfos
+            lazy val infos = config.top.fields.map(_._2)
             a =>
                 val fields = tupleFromProduct(a)
                 type Res = Vector[(String, JsValue)]

@@ -36,7 +36,6 @@ class ConfigMacro(using q: Quotes):
     private def topAnnotations(sym: Symbol): Expr[Annotations] =
         val topAnns     = Varargs(sym.annotations.flatMap(annotationTree))
         val caseParams  = sym.primaryConstructor.paramSymss.take(1).flatten
-        val fields      = Varargs(caseParams.map(sym => Expr(sym.name)))
         val fieldAnns   = Varargs(caseParams.map(fieldAnnotations))
         val name        = Expr(sym.name)
         val isSingleton = Expr(isVal.isDefinedAt(sym.tree))
@@ -45,8 +44,7 @@ class ConfigMacro(using q: Quotes):
             Annotations(
               name = $name,
               forType = Vector($topAnns: _*),
-              byField = Map($fieldAnns: _*),
-              fields = Vector($fields: _*),
+              fields = Vector($fieldAnns: _*),
               isSingleton = $isSingleton,
             )
         }
@@ -59,8 +57,8 @@ class ConfigMacro(using q: Quotes):
         '{ ($name, $annots) }
     end subtypeAnnotation
 
-    private def subtypeAnnotations(sym: Symbol): Expr[Map[String, Annotations]] =
+    private def subtypeAnnotations(sym: Symbol): Expr[Vector[(String, Annotations)]] =
         val subtypes = Varargs(sym.children.map(subtypeAnnotation))
 
-        '{ Map($subtypes: _*) }
+        '{ Vector($subtypes: _*) }
 end ConfigMacro

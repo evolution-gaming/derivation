@@ -84,7 +84,7 @@ object EvoReads:
     ) extends LazySummonByConfig[EvoReads, A]:
         def instance(using config: => Config[A]): EvoReads[A] = new:
 
-            lazy val infos = config.top.fieldInfos
+            lazy val infos = config.top.fields.map(_._2)
 
             private def onField(
                 json: JsValue,

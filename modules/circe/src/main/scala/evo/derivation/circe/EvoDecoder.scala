@@ -28,11 +28,10 @@ object EvoDecoder extends Template:
     inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoDecoder, A] = lazySummonForProduct
 
     def product[A](using mirror: Mirror.ProductOf[A])(
-        names: Vector[String],
         fields: LazySummon.All[Decoder, mirror.MirroredElemTypes],
     )(using config: => Config[A], ev: A <:< Product): EvoDecoder[A] = new:
 
-        lazy val infos = config.top.fieldInfos
+        lazy val infos = config.top.fields.map(_._2)
 
         private def onField(
             cur: HCursor,
@@ -53,7 +52,6 @@ object EvoDecoder extends Template:
                 case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
 
     def sum[A](using mirror: Mirror.SumOf[A])(
-        names: Vector[String],
         subs: LazySummon.All[Decoder, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, Decoder[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoDecoder[A] = new:

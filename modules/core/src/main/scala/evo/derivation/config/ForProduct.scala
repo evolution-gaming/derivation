@@ -1,16 +1,16 @@
 package evo.derivation.config
 
 import evo.derivation.DerivationAnnotation
-import evo.derivation.internal.{Updater, mapValues, update, updateMap, updater, updaters}
+import evo.derivation.internal.{Updater, update, updater, updaters, mapItems, mapSecond, filter}
 
 case class ForProduct(
     name: String,
-    fieldNames: Vector[String] = Vector.empty,
-    fields: Map[String, ForField] = Map.empty,
+    fields: Vector[(String, ForField)] = Vector.empty,
     annotations: Vector[DerivationAnnotation] = Vector.empty,
     isSingleton: Boolean = false,
 ):
-    lazy val fieldInfos = fieldNames.map(fields)
+
+    lazy val byField: Map[String, ForField] = fields.toMap
 
     private def set[X](upd: Updater[ForProduct, X])(value: X): ForProduct = upd(_ => value)(this)
 
@@ -24,11 +24,12 @@ end ForProduct
 object ForProduct:
     val renaming: Updater[ForProduct, String] =
         updaters(
-          update[ForProduct](_.fields) compose mapValues compose updater(_.name),
+          update[ForProduct](_.fields) compose mapItems compose mapSecond compose updater(_.name),
           updater(_.name),
         )
 
-    def field(name: String): Updater[ForProduct, ForField] = update[ForProduct](_.fields) compose updateMap(name)
+    def field(name: String): Updater[ForProduct, ForField] =
+        update[ForProduct](_.fields) compose mapItems compose filter(_._1 == name) compose mapSecond
 end ForProduct
 
 case class ForField(
