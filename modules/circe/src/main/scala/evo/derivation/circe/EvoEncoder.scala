@@ -77,7 +77,7 @@ object EvoObjectEncoder extends EvoTemplateEncoder with SummonForProduct:
     final type OfNewtype[A] = Encoder.AsObject[A]
 
     final type Provide[A] = EvoObjectEncoder[A]
-    
+
     def newtype[A](using nt: ValueClass[A])(using enc: Encoder.AsObject[nt.Representation]): EvoObjectEncoder[A] =
         a => enc.encodeObject(nt.to(a))
 
