@@ -6,6 +6,8 @@ import scala.compiletime.{summonAll, uninitialized, erasedValue}
 import scala.reflect.ClassTag.apply
 import scala.reflect.ClassTag
 import internal.arrays.*
+import evo.derivation.config.ForProduct
+import evo.derivation.config.ForField
 
 @implicitNotFound(
   "can't find given instance of ${TC} for ${A} that's required for field or constructor ${Name} of type ${From}",
@@ -57,6 +59,13 @@ object LazySummon:
 
             Tuple.fromIArray(elements).asInstanceOf[Tuple.Map[Fields, Res]]
         end useOn
+
+        def useOnFields[Res](product: ForProduct)(
+            f: [A] => (TC[A], String, ForField) => Res,
+        ): Vector[Res] =
+            product.fields.zip(all).map { case ((name, fld), tc: LazySummon[_, _, TC, tcc, a]) =>
+                f(tc.asInstanceOf[TC[a]], name, fld)
+            }
 
         def useCollect[Res: ClassTag, Info](fields: Fields, infos: Vector[Info])(
             f: [A] => (Info, A, TC[A]) => Res,
