@@ -33,4 +33,8 @@ class EvoEncoderChecks extends FunSuite:
     test("recursive coproduct") {
         assertEquals(parse(BinTree.binTreeJson), Right(BinTree.binTree.asJson))
     }
+
+    test("enumeration") {
+        assertEquals(parse(Animal.exampleJson), Right(Animal.example.asJson))
+    }
 end EvoEncoderChecks

@@ -22,8 +22,6 @@ class EvoDecoderChecks extends FunSuite:
     }
 
     test("complex product") {
-        println(summon[Config[Document]])
-
         assertEquals(decode[Document](Document.documentJson), Right(Document.document))
     }
 
@@ -47,5 +45,9 @@ class EvoDecoderChecks extends FunSuite:
 
     test("recursive coproduct") {
         assertEquals(decode[BinTree](BinTree.binTreeJson), Right(BinTree.binTree))
+    }
+
+    test("enumeration") {
+        assertEquals(decode[List[Animal]](Animal.exampleJson), Right(Animal.example))
     }
 end EvoDecoderChecks
