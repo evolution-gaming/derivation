@@ -24,6 +24,6 @@ end Annotations
 
 case class AllAnnotations(
     top: Annotations,
-    subtypes: Vector[(String, Annotations)],
+    subtypes: Vector[(String, AllAnnotations)],
 ):
     lazy val bySubtype = subtypes.toMap

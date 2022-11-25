@@ -10,7 +10,7 @@ import scala.quoted.{Expr, Quotes, Type, Varargs}
 case class Config[+T](
     top: ForProduct,
     discriminator: Option[String] = None,
-    constructors: Vector[(String, ForProduct)] = Vector.empty,
+    subtypes: Vector[(String, Config[T])] = Vector.empty,
 ):
 
     def applyAnnotation(annotation: DerivationAnnotation, fieldName: Option[String] = None): Config[T] =
@@ -38,6 +38,8 @@ case class Config[+T](
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
 
+    lazy val constructors: Vector[(String, ForProduct)] = ???
+
     lazy val constrFromRenamed: Map[String, String] =
         byConstructor.map((name, prod) => prod.name -> name)
 
@@ -58,23 +60,23 @@ object Config:
         case PascalCase() => pascalCase
 
     inline def derived[T]: Config[T] =
-        fromAllAnnots(readAnnotations[T])
+        fromAllAnnotations(readAnnotations[T])
 
     def products[A]: Updater[Config[A], ForProduct] =
         updaters(
           update[Config[A]](_.top),
-          update[Config[A]](_.constructors) compose mapItems compose mapSecond,
+          update[Config[A]](_.subtypes) compose mapItems compose mapSecond compose products,
         )
 
     def renaming[A]: Updater[Config[A], String] = products[A] compose ForProduct.renaming
 
-    private def fromAnnots(annotations: Annotations, initial: Config[Nothing]): Config[Nothing] =
+    private def fromAnnotations(annotations: Annotations, initial: Config[Nothing]): Config[Nothing] =
         val topApplied = annotations.forType.foldLeft(initial)(_.applyAnnotation(_))
 
         annotations.fields.foldLeft(topApplied) { case (prev, (name, annotations)) =>
             annotations.foldLeft(prev) { _.applyAnnotation(_, Some(name)) }
         }
-    end fromAnnots
+    end fromAnnotations
 
     private def basicProduct(annotations: Annotations): ForProduct =
         ForProduct(
@@ -85,20 +87,22 @@ object Config:
         )
     end basicProduct
 
-    private def fromAllAnnots(annotations: AllAnnotations): Config[Nothing] =
-        val constructors = annotations.subtypes.map((name, annots) => name -> basicProduct(annots))
+    private def basicStructure(annotations: AllAnnotations): Config[Nothing] =
+        Config(
+          top = basicProduct(annotations.top),
+          subtypes = annotations.subtypes.map((name, annots) => name -> basicStructure(annots)),
+        )
 
-        val byConstructor = Config(top = basicProduct(annotations.top), constructors = constructors)
+    private def applyAnnotations(annotations: AllAnnotations, initial: Config[Nothing]): Config[Nothing] =
+        val base = fromAnnotations(annotations.top, initial = initial)
 
-        val base = fromAnnots(annotations.top, initial = byConstructor)
+        base.copy(subtypes =
+            base.subtypes.map((name, sub) => name -> applyAnnotations(annotations.bySubtype(name), sub)),
+        )
+    end applyAnnotations
 
-        val updatedConstructors =
-            base.constructors.map((name, product) =>
-                name -> fromAnnots(annotations.bySubtype(name), initial = Config(top = product)).top,
-            )
-
-        base.copy(constructors = updatedConstructors)
-    end fromAllAnnots
+    private def fromAllAnnotations(annotations: AllAnnotations): Config[Nothing] =
+        applyAnnotations(annotations, basicStructure(annotations))
 
     private inline def readAnnotations[T]: AllAnnotations = ${ allAnnotations[T] }
 
