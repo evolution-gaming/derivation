@@ -5,6 +5,12 @@ import evo.derivation.circe.{EvoDecoder, EvoEncoder}
 import evo.derivation.config.Config
 import evo.derivation.play.json.{EvoReads, EvoWrites}
 import play.api.libs.json.given
+import sttp.tapir.SchemaType.SProduct
+import sttp.tapir.SchemaType.SProductField
+import sttp.tapir.FieldName
+import sttp.tapir.Schema
+import sttp.tapir.SchemaType.SRef
+import sttp.tapir.Schema.SName
 
 case class Dictionary(key: String, value: String, next: Option[Dictionary])
     derives Config,
@@ -26,4 +32,23 @@ object Dictionary:
         """{"key" : "a", "value" : "arbuz", "next" : {"key": "b", "value" : "baraban" , "next": null }}"""
 
     val dictionary = Dictionary("a", "arbuz", Some(Dictionary("b", "baraban", None)))
+
+    val mytype = SProduct[Dictionary](
+      List(
+        SProductField[Dictionary, String](FieldName("key"), implicitly, x => Some(x.key)),
+        SProductField[Dictionary, String](FieldName("value"), implicitly, x => Some(x.value)),
+        new SProductField[Dictionary] {
+            type FieldType = Option[Dictionary]
+
+            override def name: FieldName = FieldName("next")
+
+            override def schema: Schema[FieldType] =
+                dictSchema.name.fold(dictSchema)(name => dictSchema.copy(schemaType = SRef(name))).asOption
+
+            override def get: Dictionary => Option[FieldType] = d => Some(d.next)
+        },
+      ),
+    )
+
+    given dictSchema: Schema[Dictionary] = Schema(mytype, Some(SName("Dictionary")))
 end Dictionary

@@ -11,6 +11,7 @@ import sttp.tapir.SchemaType.SProduct
 import evo.derivation.config.ForField
 import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.FieldName
+import sttp.tapir.Schema.SName
 
 object EvoSchema extends Template with SummonForProduct:
     opaque type Provide[A] <: Schema[A] = Schema[A]
@@ -27,13 +28,14 @@ object EvoSchema extends Template with SummonForProduct:
         Schema(
           schemaType = SProduct(
             fields
-                .useOnFields(cfg.top) {
-                    [a] =>
-                        (schema: Schema[a], label: String, field: ForField) =>
-                            SProductField[A, a](FieldName(label, field.name), schema, t => ???)
+                .useOnFields[SProductField[A]](cfg.top) {
+                    new:
+                        def apply[Field](schema: => Schema[Field], label: String, field: ForField, idx: Int) =
+                            ProductField(label, field, schema, idx)
                 }
                 .toList,
           ),
+          name = Some(SName(cfg.top.name)),
         )
     end product
 
@@ -51,4 +53,19 @@ object EvoSchema extends Template with SummonForProduct:
       */
     def newtype[A](using nt: ValueClass[A])(using repr: Schema[nt.Representation]): Provide[A] =
         repr.map(r => Some(nt.from(r)))(nt.to)
+
+    private class ProductField[P, A](label: String, field: ForField, fieldSchema: => Schema[A], idx: Int)(using
+        P <:< Product,
+    ) extends SProductField[P]:
+        type FieldType = A
+
+        override def name = FieldName(label, field.name)
+
+        override def schema: Schema[A] = fieldSchema
+
+        override def get: P => Option[FieldType] =
+            p => Some(p.productElement(idx).asInstanceOf[FieldType])
+
+    end ProductField
+
 end EvoSchema

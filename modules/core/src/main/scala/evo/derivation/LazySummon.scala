@@ -1,13 +1,13 @@
 package evo.derivation
 
-import evo.derivation.config.Config
 import scala.annotation.implicitNotFound
-import scala.compiletime.{summonAll, uninitialized, erasedValue}
-import scala.reflect.ClassTag.apply
+import scala.compiletime.{erasedValue, summonAll, uninitialized}
 import scala.reflect.ClassTag
+import scala.reflect.ClassTag.apply
+
+import evo.derivation.config.{Config, ForField, ForProduct}
+
 import internal.arrays.*
-import evo.derivation.config.ForProduct
-import evo.derivation.config.ForField
 
 @implicitNotFound(
   "can't find given instance of ${TC} for ${A} that's required for field or constructor ${Name} of type ${From}",
@@ -49,6 +49,9 @@ object LazySummon:
         type Summons = Tuple.Map[Tuple.Zip[Names, Fields], [A] =>> Applied[TC, TCC, From, A]]
         summonAll[Summons].toIArray.map(_.asInstanceOf[Of[TC]])
 
+    trait FieldUse[TC[_], Res]:
+        def apply[A](tc: => TC[A], name: String, forField: ForField, i: Int): Res
+
     extension [TC[_], Fields <: Tuple](all: All[TC, Fields])
         def useOn[Src[_], Res[_]](fields: Tuple.Map[Fields, Src])(
             f: [A] => (TC[A], Src[A]) => Res[A],
@@ -61,10 +64,10 @@ object LazySummon:
         end useOn
 
         def useOnFields[Res](product: ForProduct)(
-            f: [A] => (TC[A], String, ForField) => Res,
+            f: FieldUse[TC, Res],
         ): Vector[Res] =
-            product.fields.zip(all).map { case ((name, fld), tc: LazySummon[_, _, TC, tcc, a]) =>
-                f(tc.asInstanceOf[TC[a]], name, fld)
+            product.fields.zip(all).zipWithIndex.map { case (((name, fld), ltc: LazySummon[_, _, TC, tcc, a]), i) =>
+                f(ltc.tc, name, fld, i)
             }
 
         def useCollect[Res: ClassTag, Info](fields: Fields, infos: Vector[Info])(

@@ -5,6 +5,10 @@ import evo.derivation.circe.{EvoDecoder, EvoEncoder}
 import evo.derivation.config.Config
 import evo.derivation.play.json.{EvoReads, EvoWrites}
 import evo.derivation.{Discriminator, SnakeCase}
+import sttp.tapir.Schema
+import sttp.tapir.SchemaType.SProduct
+import sttp.tapir.SchemaType.SProductField
+import sttp.tapir.FieldName
 
 @Discriminator("kind")
 @SnakeCase
@@ -40,4 +44,5 @@ object BinTree:
 
     val binTree =
         BinTree.Branch(1, left = BinTree.Nil, right = BinTree.Branch(3, left = BinTree.Nil, right = BinTree.Nil))
+
 end BinTree
