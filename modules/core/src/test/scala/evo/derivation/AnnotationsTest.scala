@@ -8,40 +8,40 @@ import evo.derivation.AnnotationTest.Gorynych
 class AnnotationsTest extends munit.FunSuite:
     test("isbuzhka") {
         val cfg = summon[Config[Izbushka]]
-        assertEquals(cfg.top.fields("hutHut").name, "hut_hut")
-        assertEquals(cfg.top.fields("ping"), ForField(name = "pong", annotations = Vector(Rename("pong"))))
-        assert(cfg.top.fields("azaza").embed)
+        assertEquals(cfg.top.byField("hutHut").name, "hut_hut")
+        assertEquals(cfg.top.byField("ping"), ForField(name = "pong", annotations = Vector(Rename("pong"))))
+        assert(cfg.top.byField("azaza").embed)
     }
 
     test("baba") {
         val cfg = summon[Config[Baba]]
-        assertEquals(cfg.constructors("FooFoo").name, "foo_foo")
-        assertEquals(cfg.constructors("Yaga").name, "Jaga")
-        assertEquals(cfg.constructors("Noga").fields("rightLeg").name, "right_leg")
-        assertEquals(cfg.constructors("Kostyanaya").fields("kekJi").name, "kek_ji")
+        assertEquals(cfg.byConstructor("FooFoo").name, "foo_foo")
+        assertEquals(cfg.byConstructor("Yaga").name, "Jaga")
+        assertEquals(cfg.byConstructor("Noga").byField("rightLeg").name, "right_leg")
+        assertEquals(cfg.byConstructor("Kostyanaya").byField("kekJi").name, "kek_ji")
 
     }
 
     test("baba singleton flag") {
         val cfg = summon[Config[Baba]]
         assert(!cfg.top.isSingleton, "enum Baba is not a singleton")
-        assert(cfg.constructors("FooFoo").isSingleton, "case object FooFoo is a singleton")
-        assert(cfg.constructors("Yaga").isSingleton, "case object Yaga is a singleton")
-        assert(!cfg.constructors("Kostyanaya").isSingleton, "case class Kostyanaya is not a singleton")
+        assert(cfg.byConstructor("FooFoo").isSingleton, "case object FooFoo is a singleton")
+        assert(cfg.byConstructor("Yaga").isSingleton, "case object Yaga is a singleton")
+        assert(!cfg.byConstructor("Kostyanaya").isSingleton, "case class Kostyanaya is not a singleton")
     }
 
     test("pech") {
         val cfg = summon[Config[Pech]]
         assertEquals(cfg.top.name, "Pech")
-        assertEquals(cfg.top.fields("Ivan"), ForField(name = "ivan", annotations = Vector(SnakeCase())))
-        assertEquals(cfg.top.fields("Durak").name, "Durak")
+        assertEquals(cfg.top.byField("Ivan"), ForField(name = "ivan", annotations = Vector(SnakeCase())))
+        assertEquals(cfg.top.byField("Durak").name, "Durak")
     }
 
     test("gosudarstvo") {
         val cfg = summon[Config[Gosudarstvo]]
         assertEquals(
           cfg.top.fields,
-          Map(
+          Vector(
             "tridesatoyeGosudarstvo"  -> ForField(name = "TridesatoyeGosudarstvo", annotations = Vector(PascalCase())),
             "tridevyatoyeGosudarstvo" -> ForField(name = "tridevyatoye-gosudarstvo", annotations = Vector(KebabCase())),
           ),

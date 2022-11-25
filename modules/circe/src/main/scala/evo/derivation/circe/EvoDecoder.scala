@@ -1,7 +1,7 @@
 package evo.derivation.circe
 
 import io.circe.Decoder
-import evo.derivation.template.Template
+import evo.derivation.template.ConsistentTemplate
 import evo.derivation.LazySummon
 import evo.derivation.config.Config
 import scala.deriving.Mirror
@@ -15,24 +15,19 @@ import io.circe.DecodingFailure
 import io.circe.Decoder.Result
 import io.circe.ACursor
 import evo.derivation.LazySummon.LazySummonByConfig
+import evo.derivation.template.SummonForProduct
 
 trait EvoDecoder[A] extends Decoder[A]
 
-object EvoDecoder extends Template:
-    type OfNewtype[A] = Decoder[A]
-    type OfField[A]   = Decoder[A]
-    type OfSubtype[A] = Decoder[A]
+object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonForProduct:
 
     type Provide[A] = EvoDecoder[A]
 
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[EvoDecoder, A] = lazySummonForProduct
-
     def product[A](using mirror: Mirror.ProductOf[A])(
-        names: Vector[String],
         fields: LazySummon.All[Decoder, mirror.MirroredElemTypes],
     )(using config: => Config[A], ev: A <:< Product): EvoDecoder[A] = new:
 
-        lazy val infos = config.top.fieldInfos
+        lazy val infos = IArray(config.top.fields.map(_._2)*)
 
         private def onField(
             cur: HCursor,
@@ -53,7 +48,6 @@ object EvoDecoder extends Template:
                 case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
 
     def sum[A](using mirror: Mirror.SumOf[A])(
-        names: Vector[String],
         subs: LazySummon.All[Decoder, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, Decoder[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoDecoder[A] = new:

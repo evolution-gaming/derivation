@@ -1,7 +1,7 @@
 package evo.derivation.config
 
 import evo.derivation.*
-import evo.derivation.internal.{updater, update, updaters, Updater, mapValues}
+import evo.derivation.internal.{updater, update, updaters, Updater, mapItems, mapSecond}
 
 import scala.compiletime.*
 import scala.deriving.Mirror
@@ -10,7 +10,7 @@ import scala.quoted.{Expr, Quotes, Type, Varargs}
 case class Config[+T](
     top: ForProduct,
     discriminator: Option[String] = None,
-    constructors: Map[String, ForProduct] = Map.empty,
+    constructors: Vector[(String, ForProduct)] = Vector.empty,
 ):
 
     def applyAnnotation(annotation: DerivationAnnotation, fieldName: Option[String] = None): Config[T] =
@@ -31,17 +31,19 @@ case class Config[+T](
             case custom: Custom         => custom(this)
 
     def name(constructor: String): String =
-        constructors.get(constructor).map(_.name).getOrElse(constructor)
-
-    lazy val constrFromRenamed: Map[String, String] =
-        constructors.map((name, prod) => prod.name -> name)
+        byConstructor.get(constructor).map(_.name).getOrElse(constructor)
 
     def constructor(name: String): Config[Any] =
-        constructors.get(name).fold(Config.named(name))(p => Config(top = p))
+        byConstructor.get(name).fold(Config.named(name))(p => Config(top = p))
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
 
-    lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.values.forall(_.isSingleton)
+    lazy val constrFromRenamed: Map[String, String] =
+        byConstructor.map((name, prod) => prod.name -> name)
+
+    lazy val byConstructor: Map[String, ForProduct] = constructors.toMap
+
+    lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.forall(_._2.isSingleton)
 
 end Config
 
@@ -59,27 +61,25 @@ object Config:
         fromAllAnnots(readAnnotations[T])
 
     def products[A]: Updater[Config[A], ForProduct] =
-        updaters(update[Config[A]](_.top), update[Config[A]](_.constructors) compose mapValues)
-    def renaming[A]: Updater[Config[A], String]     = products[A] compose ForProduct.renaming
+        updaters(
+          update[Config[A]](_.top),
+          update[Config[A]](_.constructors) compose mapItems compose mapSecond,
+        )
+
+    def renaming[A]: Updater[Config[A], String] = products[A] compose ForProduct.renaming
 
     private def fromAnnots(annotations: Annotations, initial: Config[Nothing]): Config[Nothing] =
         val topApplied = annotations.forType.foldLeft(initial)(_.applyAnnotation(_))
 
-        annotations.byField.foldLeft(topApplied) { case (prev, (name, annotations)) =>
+        annotations.fields.foldLeft(topApplied) { case (prev, (name, annotations)) =>
             annotations.foldLeft(prev) { _.applyAnnotation(_, Some(name)) }
         }
     end fromAnnots
 
     private def basicProduct(annotations: Annotations): ForProduct =
-        def field(name: String) = ForField(
-          name = name,
-          annotations = annotations.byField.getOrElse(name, Vector.empty),
-        )
-
         ForProduct(
           name = annotations.name,
-          fieldNames = annotations.fields,
-          fields = annotations.fields.map(name => name -> field(name)).toMap,
+          fields = annotations.fields.map { (name, anns) => name -> ForField(name = name, annotations = anns) },
           annotations = annotations.forType,
           isSingleton = annotations.isSingleton,
         )
@@ -94,7 +94,7 @@ object Config:
 
         val updatedConstructors =
             base.constructors.map((name, product) =>
-                name -> fromAnnots(annotations.subtypes(name), initial = Config(top = product)).top,
+                name -> fromAnnots(annotations.bySubtype(name), initial = Config(top = product)).top,
             )
 
         base.copy(constructors = updatedConstructors)

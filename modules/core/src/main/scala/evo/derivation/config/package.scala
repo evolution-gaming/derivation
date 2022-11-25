@@ -16,12 +16,14 @@ private type DA = DerivationAnnotation
 case class Annotations(
     name: String,
     forType: Vector[DA],
-    byField: Map[String, Vector[DA]],
-    fields: Vector[String],
+    fields: Vector[(String, Vector[DA])],
     isSingleton: Boolean,
-)
+):
+    lazy val byField: Map[String, Vector[DA]] = fields.toMap
+end Annotations
 
 case class AllAnnotations(
     top: Annotations,
-    subtypes: Map[String, Annotations],
-)
+    subtypes: Vector[(String, Annotations)],
+):
+    lazy val bySubtype = subtypes.toMap

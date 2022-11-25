@@ -38,7 +38,6 @@ trait Template:
     /** called for the case classes derivation
       */
     def product[A](using mirror: Mirror.ProductOf[A])(
-        names: Vector[String],
         fields: LazySummon.All[OfField, mirror.MirroredElemTypes],
     )(using => Config[A], A <:< Product): Provide[A]
 
@@ -48,7 +47,6 @@ trait Template:
       * with great caution!
       */
     def sum[A](using mirror: Mirror.SumOf[A])(
-        names: Vector[String],
         subs: LazySummon.All[OfSubtype, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, OfSubtype[A]],
     )(using config: => Config[A], matching: Matching[A]): Provide[A]
@@ -82,7 +80,7 @@ trait Template:
 
         val names = mirroredNames[A]
 
-        sum[A](names, fieldInstances, fieldInstances.toMap(names))
+        sum[A](fieldInstances, fieldInstances.toMap(names))
     end deriveForSum
 
     private[template] inline def deriveForProduct[A](using
@@ -94,7 +92,7 @@ trait Template:
         val fieldInstances =
             LazySummon.all[mirror.MirroredElemLabels, A, F, Provide, mirror.MirroredElemTypes]
 
-        product[A](mirroredNames[A], fieldInstances)(using config, summonInline)
+        product[A](fieldInstances)(using config, summonInline)
     end deriveForProduct
 
     private[template] inline def deriveForNewtype[A](using nt: ValueClass[A]): Provide[A] =
@@ -104,11 +102,18 @@ trait Template:
 
 end Template
 
-/** simplified trait, useful when your define derivation for your own typeclass
+/** simplified trait, useful when your require the same typeclass in all cases
   */
-trait HomogenicTemplate[TC[_]] extends Template:
-    type Provide[A]   = TC[A]
+trait ConsistentTemplate[TC[_], Prov[_]] extends Template:
     type OfField[A]   = TC[A]
     type OfSubtype[A] = TC[A]
     type OfNewtype[A] = TC[A]
-end HomogenicTemplate
+    type Provide[A]   = Prov[A]
+end ConsistentTemplate
+
+/** event more simplified trait, useful when your define derivation for your own typeclass
+  */
+trait HomogenicTemplate[TC[_]] extends ConsistentTemplate[TC, TC]
+
+trait SummonForProduct extends Template:
+    inline given [A: Mirror.ProductOf]: LazySummonByConfig[Provide, A] = lazySummonForProduct
