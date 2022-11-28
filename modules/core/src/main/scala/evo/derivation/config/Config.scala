@@ -6,6 +6,7 @@ import evo.derivation.internal.{updater, update, updaters, Updater, mapItems, ma
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type, Varargs}
+import internal.vectors.given
 
 case class Config[+T](
     top: ForProduct,
@@ -38,7 +39,10 @@ case class Config[+T](
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
 
-    lazy val constructors: Vector[(String, ForProduct)] = ???
+    def isConstructor = subtypes.isEmpty
+
+    lazy val constructors: Vector[(String, ForProduct)] =
+        subtypes.flatMap { case (name, t) => if t.isConstructor then Array(name -> t.top) else t.constructors }
 
     lazy val constrFromRenamed: Map[String, String] =
         byConstructor.map((name, prod) => prod.name -> name)
