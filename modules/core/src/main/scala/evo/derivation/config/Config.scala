@@ -72,11 +72,11 @@ object Config:
         fromAllAnnotations(readAnnotations[T])
 
     /* enumerating all the subconfigs */
-    def configs[A]: Updater[Config[A], Config[A]] = f => _.modConfig(f)
+    def configs[T]: Updater[Config[T], Config[T]] = f => _.modConfig(f)
 
-    def products[A]: Updater[Config[A], ForProduct[A]] = configs compose updater(_.top)
+    def products[T]: Updater[Config[T], ForProduct[T]] = configs compose updater(_.top)
 
-    def renaming[A]: Updater[Config[A], String] = products[A] compose ForProduct.renaming
+    def renaming[T]: Updater[Config[T], String] = products[T] compose ForProduct.renaming
 
     private def fromAnnotations[A](annotations: Annotations[A], initial: Config[A]): Config[A] =
         val topApplied = annotations.forType.foldLeft(initial)(_.applyAnnotation(_))
@@ -86,7 +86,7 @@ object Config:
         }
     end fromAnnotations
 
-    private def basicProduct[A](annotations: Annotations[A]): ForProduct[A] =
+    private def basicProduct[T](annotations: Annotations[T]): ForProduct[T] =
         ForProduct(
           name = annotations.name,
           fields = annotations.fields.map { (name, anns) =>
@@ -97,13 +97,13 @@ object Config:
         )
     end basicProduct
 
-    private def basicStructure[A](annotations: AllAnnotations[A]): Config[A] =
+    private def basicStructure[T](annotations: AllAnnotations[T]): Config[T] =
         Config(
           top = basicProduct(annotations.top),
           subtypes = annotations.subtypes.map((name, annots) => name -> basicStructure(annots)),
         )
 
-    private def applyAnnotations[A](annotations: AllAnnotations[A], initial: Config[A]): Config[A] =
+    private def applyAnnotations[T](annotations: AllAnnotations[T], initial: Config[T]): Config[T] =
         val base = fromAnnotations(annotations.top, initial = initial)
 
         base.copy(subtypes =
@@ -111,7 +111,7 @@ object Config:
         )
     end applyAnnotations
 
-    private def fromAllAnnotations[A](annotations: AllAnnotations[A]): Config[A] =
+    private def fromAllAnnotations[T](annotations: AllAnnotations[T]): Config[T] =
         applyAnnotations(annotations, basicStructure(annotations))
 
     private inline def readAnnotations[T]: AllAnnotations[T] = ${ allAnnotations[T] }
