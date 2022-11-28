@@ -6,7 +6,6 @@ import evo.derivation.internal.{updater, update, updaters, Updater, mapItems, ma
 import scala.compiletime.*
 import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type, Varargs}
-import internal.vectors.given
 
 case class Config[+T](
     top: ForProduct,
@@ -51,6 +50,13 @@ case class Config[+T](
 
     lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.forall(_._2.isSingleton)
 
+    def modConfig[T1 >: T](f: Config[T1] => Config[T1]): Config[T1] =
+        f(
+          copy(
+            subtypes = subtypes.map { case (name, sub) => name -> sub.modConfig(f) },
+          ),
+        )
+
 end Config
 
 object Config:
@@ -66,11 +72,10 @@ object Config:
     inline def derived[T]: Config[T] =
         fromAllAnnotations(readAnnotations[T])
 
-    def products[A]: Updater[Config[A], ForProduct] =
-        updaters(
-          update[Config[A]](_.top),
-          update[Config[A]](_.subtypes) compose mapItems compose mapSecond compose products,
-        )
+    /* enumerating all the subconfigs */
+    def configs[A]: Updater[Config[A], Config[A]] = f => _.modConfig(f)
+
+    def products[A]: Updater[Config[A], ForProduct] = configs compose updater(_.top)
 
     def renaming[A]: Updater[Config[A], String] = products[A] compose ForProduct.renaming
 
