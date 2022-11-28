@@ -51,11 +51,7 @@ case class Config[+T](
     lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.forall(_._2.isSingleton)
 
     def modConfig[T1 >: T](f: Config[T1] => Config[T1]): Config[T1] =
-        f(
-          copy(
-            subtypes = subtypes.map { case (name, sub) => name -> sub.modConfig(f) },
-          ),
-        )
+        f(copy(subtypes = subtypes.map { case (name, sub) => name -> sub.modConfig(f) }))
 
 end Config
 
