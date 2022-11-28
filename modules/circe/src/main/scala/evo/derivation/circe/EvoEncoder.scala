@@ -24,7 +24,7 @@ abstract class EvoTemplateEncoder extends Template:
     )(using config: => Config[A], ev: A <:< Product): EvoObjectEncoder[A] = new:
         lazy val infos = config.top.fields.map(_._2)
 
-        private def encodeField(info: ForField, json: Json): Vector[(String, Json)] =
+        private def encodeField(info: ForField[_], json: Json): Vector[(String, Json)] =
             json.asObject match
                 case Some(obj) if info.embed => obj.toVector
                 case _                       => Vector(info.name -> json)
@@ -32,8 +32,8 @@ abstract class EvoTemplateEncoder extends Template:
         def encodeObject(a: A): JsonObject =
             val fields = tupleFromProduct(a)
             type Res = Vector[(String, Json)]
-            val results = fieldInstances.useCollect[Res, ForField](fields, infos)(
-              [X] => (info: ForField, a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
+            val results = fieldInstances.useCollect[Res, ForField[_]](fields, infos)(
+              [X] => (info: ForField[_], a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
             )
             JsonObject.fromIterable(results.flatten)
         end encodeObject

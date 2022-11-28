@@ -78,14 +78,14 @@ object EvoReads extends ConsistentTemplate[Reads, EvoReads] with SummonForProduc
             json: JsValue,
         )(
             decoder: LazySummon.Of[Reads],
-            info: ForField,
+            info: ForField[_],
         ): Either[Seq[(JsPath, Seq[JsonValidationError])], decoder.FieldType] =
             val js = if info.embed then json else (json \ info.name).getOrElse(JsNull)
             decoder.use(js.validate[decoder.FieldType].asEither)
         end onField
 
         override def reads(json: JsValue): JsResult[A] =
-            fieldInstances.useEitherFast[ForField, Seq[(JsPath, Seq[JsonValidationError])]](infos)(
+            fieldInstances.useEitherFast[ForField[_], Seq[(JsPath, Seq[JsonValidationError])]](infos)(
               onField(json),
             ) match
                 case Left(err)    => JsError(err)

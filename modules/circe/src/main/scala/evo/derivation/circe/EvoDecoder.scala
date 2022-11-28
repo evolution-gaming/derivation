@@ -31,7 +31,7 @@ object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonFor
 
         private def onField(
             cur: HCursor,
-        )(decoder: LazySummon.Of[Decoder], info: ForField): Decoder.Result[decoder.FieldType] =
+        )(decoder: LazySummon.Of[Decoder], info: ForField[_ <: A]): Decoder.Result[decoder.FieldType] =
             val cursor = if info.embed then cur else cur.downField(info.name)
             decoder.use(cursor.as[decoder.FieldType])
         end onField

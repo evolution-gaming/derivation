@@ -8,7 +8,7 @@ import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type, Varargs}
 
 case class Config[+T](
-    top: ForProduct[T],
+    top: ForProduct[T, _],
     discriminator: Option[String] = None,
     subtypes: Vector[(String, Config[T])] = Vector.empty,
 ):
@@ -40,13 +40,13 @@ case class Config[+T](
 
     def isConstructor = subtypes.isEmpty
 
-    lazy val constructors: Vector[(String, ForProduct[T])] =
+    lazy val constructors: Vector[(String, ForProduct[T, _ <: T])] =
         subtypes.flatMap((name, t) => if t.isConstructor then Array(name -> t.top) else t.constructors)
 
     lazy val constrFromRenamed: Map[String, String] =
         byConstructor.map((name, prod) => prod.name -> name)
 
-    lazy val byConstructor: Map[String, ForProduct[T]] = constructors.toMap
+    lazy val byConstructor: Map[String, ForProduct[T, _]] = constructors.toMap
 
     lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.forall(_._2.isSingleton)
 
@@ -74,23 +74,23 @@ object Config:
     /* enumerating all the subconfigs */
     def configs[T]: Updater[Config[T], Config[T]] = f => _.modConfig(f)
 
-    def products[T]: Updater[Config[T], ForProduct[T]] = configs compose updater(_.top)
+    def products[T]: Updater[Config[T], ForProduct[T, _]] = configs compose updater(_.top)
 
     def renaming[T]: Updater[Config[T], String] = products[T] compose ForProduct.renaming
 
     private def fromAnnotations[A](annotations: Annotations[A], initial: Config[A]): Config[A] =
         val topApplied = annotations.forType.foldLeft(initial)(_.applyAnnotation(_))
 
-        annotations.fields.foldLeft(topApplied) { case (prev, (name, annotations)) =>
+        annotations.fields.foldLeft(topApplied) { case (prev, (name, annotations, _)) =>
             annotations.foldLeft(prev) { _.applyAnnotation(_, Some(name)) }
         }
     end fromAnnotations
 
-    private def basicProduct[T](annotations: Annotations[T]): ForProduct[T] =
+    private def basicProduct[T](annotations: Annotations[T]): ForProduct[T, T] =
         ForProduct(
           name = annotations.name,
-          fields = annotations.fields.map { (name, anns) =>
-              name -> ForField(name = name, annotations = anns)
+          fields = annotations.fields.map { (name, anns, info) =>
+              name -> ForField(name = name, annotations = anns, info = info.asInstanceOf[Option[FieldValueInfo[T, _]]])
           },
           annotations = annotations.forType,
           singleton = annotations.singleton,
@@ -103,7 +103,7 @@ object Config:
           subtypes = annotations.subtypes.map((name, annots) => name -> basicStructure(annots)),
         )
 
-    private def applyAnnotations[T](annotations: AllAnnotations[T], initial: Config[T]): Config[T] =
+    private def applyAnnotations[A](annotations: AllAnnotations[A], initial: Config[A]): Config[A] =
         val base = fromAnnotations(annotations.top, initial = initial)
 
         base.copy(subtypes =
@@ -111,7 +111,7 @@ object Config:
         )
     end applyAnnotations
 
-    private def fromAllAnnotations[T](annotations: AllAnnotations[T]): Config[T] =
+    private def fromAllAnnotations[A](annotations: AllAnnotations[A]): Config[A] =
         applyAnnotations(annotations, basicStructure(annotations))
 
     private inline def readAnnotations[T]: AllAnnotations[T] = ${ allAnnotations[T] }

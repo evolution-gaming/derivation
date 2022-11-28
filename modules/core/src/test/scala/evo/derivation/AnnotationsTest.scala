@@ -4,12 +4,15 @@ import AnnotationTest.{Baba, Gosudarstvo, Izbushka, Pech}
 import evo.derivation.config.{Config, ForField}
 import scala.CanEqual.derived
 import evo.derivation.AnnotationTest.Gorynych
+import evo.derivation.config.ForProduct
 
 class AnnotationsTest extends munit.FunSuite:
+    extension [T](ff: ForField[T]) def noInfo = ff.copy(info = None)
+
     test("isbuzhka") {
         val cfg = summon[Config[Izbushka]]
         assertEquals(cfg.top.byField("hutHut").name, "hut_hut")
-        assertEquals(cfg.top.byField("ping"), ForField(name = "pong", annotations = Vector(Rename("pong"))))
+        assertEquals(cfg.top.byField("ping").noInfo, ForField(name = "pong", annotations = Vector(Rename("pong"))))
         assert(cfg.top.byField("azaza").embed)
     }
 
@@ -33,14 +36,14 @@ class AnnotationsTest extends munit.FunSuite:
     test("pech") {
         val cfg = summon[Config[Pech]]
         assertEquals(cfg.top.name, "Pech")
-        assertEquals(cfg.top.byField("Ivan"), ForField(name = "ivan", annotations = Vector(SnakeCase())))
+        assertEquals(cfg.top.byField("Ivan").noInfo, ForField(name = "ivan", annotations = Vector(SnakeCase())))
         assertEquals(cfg.top.byField("Durak").name, "Durak")
     }
 
     test("gosudarstvo") {
         val cfg = summon[Config[Gosudarstvo]]
         assertEquals(
-          cfg.top.fields,
+          cfg.top.fields.map((name, ff) => name -> ff.noInfo),
           Vector(
             "tridesatoyeGosudarstvo"  -> ForField(name = "TridesatoyeGosudarstvo", annotations = Vector(PascalCase())),
             "tridevyatoyeGosudarstvo" -> ForField(name = "tridevyatoye-gosudarstvo", annotations = Vector(KebabCase())),
@@ -52,6 +55,18 @@ class AnnotationsTest extends munit.FunSuite:
         assert(!summon[Config[Izbushka]].isSimpleEnum, "case class is not a simple enum")
         assert(!summon[Config[Baba]].isSimpleEnum, "enum with non-object cases is not a simple enum")
         assert(summon[Config[Gorynych]].isSimpleEnum, "enum with only object cases is a simple enum")
+    }
+
+    test("simple field get") {
+        val izbushka = Izbushka(ping = "ping")
+        val izCfg    = summon[Config[Izbushka]]
+        assertEquals(
+          izCfg.top match
+              case fp: ForProduct[Izbushka, Izbushka] =>
+                  fp.byField("ping").info.map(valI => valI.read(izbushka))
+          ,
+          Some("ping"),
+        )
     }
 
 end AnnotationsTest
