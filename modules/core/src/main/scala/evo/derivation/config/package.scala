@@ -13,17 +13,17 @@ val pascalCase: Renaming = _.capitalize
 
 private type DA = DerivationAnnotation
 
-case class Annotations(
+case class Annotations[X](
     name: String,
     forType: Vector[DA],
     fields: Vector[(String, Vector[DA])],
-    isSingleton: Boolean,
+    singleton: Option[X],
 ):
     lazy val byField: Map[String, Vector[DA]] = fields.toMap
 end Annotations
 
-case class AllAnnotations(
-    top: Annotations,
-    subtypes: Vector[(String, AllAnnotations)],
+case class AllAnnotations[X](
+    top: Annotations[X],
+    subtypes: Vector[(String, AllAnnotations[X])],
 ):
     lazy val bySubtype = subtypes.toMap

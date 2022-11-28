@@ -9,9 +9,9 @@ class ConfigMacro(using q: Quotes):
 
     import q.reflect.*
 
-    def allAnnotations[T: Type]: Expr[AllAnnotations] = annotations(TypeRepr.of[T].typeSymbol)
+    def allAnnotations[T: Type]: Expr[AllAnnotations[T]] = annotations(TypeRepr.of[T].typeSymbol)
 
-    private def annotations(sym: Symbol): Expr[AllAnnotations] =
+    private def annotations[T: Type](sym: Symbol): Expr[AllAnnotations[T]] =
         '{
             AllAnnotations(
               top = ${ topAnnotations(sym) },
@@ -29,34 +29,35 @@ class ConfigMacro(using q: Quotes):
         '{ $name -> Vector($annots: _*) }
     end fieldAnnotations
 
-    private val isVal: PartialFunction[Tree, Unit] =
-        case _: ValDef => ()
-
-    private def topAnnotations(sym: Symbol): Expr[Annotations] =
-        val topAnns     = Varargs(sym.annotations.flatMap(annotationTree))
-        val caseParams  = sym.primaryConstructor.paramSymss.take(1).flatten
-        val fieldAnns   = Varargs(caseParams.map(fieldAnnotations))
-        val name        = Expr(sym.name)
-        val isSingleton = Expr(isVal.isDefinedAt(sym.tree))
+    private def topAnnotations[T: Type](sym: Symbol): Expr[Annotations[T]] =
+        val topAnns                    = Varargs(sym.annotations.flatMap(annotationTree))
+        val caseParams                 = sym.primaryConstructor.paramSymss.take(1).flatten
+        val fieldAnns                  = Varargs(caseParams.map(fieldAnnotations))
+        val name                       = Expr(sym.name)
+        val singleton: Expr[Option[T]] = sym.tree match
+            case _: ValDef =>
+                val ref = Ref(sym).asExpr.asExprOf[T]
+                '{ Some($ref) }
+            case _         => Expr(None)
 
         '{
             Annotations(
               name = $name,
               forType = Vector($topAnns: _*),
               fields = Vector($fieldAnns: _*),
-              isSingleton = $isSingleton,
+              singleton = $singleton,
             )
         }
     end topAnnotations
 
-    private def subtypeAnnotation(sym: Symbol): Expr[(String, AllAnnotations)] =
+    private def subtypeAnnotation[T: Type](sym: Symbol): Expr[(String, AllAnnotations[T])] =
         val name   = Expr(sym.name)
         val annots = annotations(sym)
 
         '{ ($name, $annots) }
     end subtypeAnnotation
 
-    private def subtypeAnnotations(sym: Symbol): Expr[Vector[(String, AllAnnotations)]] =
+    private def subtypeAnnotations[T: Type](sym: Symbol): Expr[Vector[(String, AllAnnotations[T])]] =
         val subtypes = Varargs(sym.children.map(subtypeAnnotation))
 
         '{ Vector($subtypes: _*) }

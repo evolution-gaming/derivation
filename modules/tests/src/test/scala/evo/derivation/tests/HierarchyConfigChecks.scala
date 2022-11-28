@@ -1,7 +1,7 @@
 package evo.derivation.tests
 
 import evo.derivation.config.Config
-import evo.derivation.tests.data.{Fruit, Dessert}
+import evo.derivation.tests.data.*
 
 class HierarchyConfigChecks extends munit.FunSuite:
     test("Fruit is a simple enum") {
@@ -41,5 +41,23 @@ class HierarchyConfigChecks extends munit.FunSuite:
         )
 
         assertEquals(buildHierarchy(summon).toSet, expected)
+    }
+
+    // here we checking also the consistency of the order
+    // constructors should be in the exact same order they were defined
+    test("Fruit constructs collects correct set of singletons") {
+        val expected = Vector[(String, Fruit)](
+          "Cherry"   -> Prunus.Cherry,
+          "Peach"    -> Prunus.Peach,
+          "Apricot"  -> Prunus.Apricot,
+          "Apple"    -> Malinae.Apple,
+          "Pear"     -> Malinae.Pear,
+          "Lemon"    -> Citrus.Lemon,
+          "Orange"   -> Citrus.Orange,
+          "Mandarin" -> Citrus.Mandarin,
+          "Kumquat"  -> Citrus.Kumquat,
+        )
+
+        assertEquals(summon[Config[Fruit]].enumValues, expected)
     }
 end HierarchyConfigChecks

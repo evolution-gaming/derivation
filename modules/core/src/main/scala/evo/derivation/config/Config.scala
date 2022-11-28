@@ -8,7 +8,7 @@ import scala.deriving.Mirror
 import scala.quoted.{Expr, Quotes, Type, Varargs}
 
 case class Config[+T](
-    top: ForProduct,
+    top: ForProduct[T],
     discriminator: Option[String] = None,
     subtypes: Vector[(String, Config[T])] = Vector.empty,
 ):
@@ -40,15 +40,18 @@ case class Config[+T](
 
     def isConstructor = subtypes.isEmpty
 
-    lazy val constructors: Vector[(String, ForProduct)] =
-        subtypes.flatMap { case (name, t) => if t.isConstructor then Array(name -> t.top) else t.constructors }
+    lazy val constructors: Vector[(String, ForProduct[T])] =
+        subtypes.flatMap((name, t) => if t.isConstructor then Array(name -> t.top) else t.constructors)
 
     lazy val constrFromRenamed: Map[String, String] =
         byConstructor.map((name, prod) => prod.name -> name)
 
-    lazy val byConstructor: Map[String, ForProduct] = constructors.toMap
+    lazy val byConstructor: Map[String, ForProduct[T]] = constructors.toMap
 
     lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.forall(_._2.isSingleton)
+
+    def enumValues: Vector[(String, T)] =
+        constructors.flatMap((name, prod) => prod.singleton.map(name -> _))
 
     def modConfig[T1 >: T](f: Config[T1] => Config[T1]): Config[T1] =
         f(copy(subtypes = subtypes.map { case (name, sub) => name -> sub.modConfig(f) }))
@@ -71,11 +74,11 @@ object Config:
     /* enumerating all the subconfigs */
     def configs[A]: Updater[Config[A], Config[A]] = f => _.modConfig(f)
 
-    def products[A]: Updater[Config[A], ForProduct] = configs compose updater(_.top)
+    def products[A]: Updater[Config[A], ForProduct[A]] = configs compose updater(_.top)
 
     def renaming[A]: Updater[Config[A], String] = products[A] compose ForProduct.renaming
 
-    private def fromAnnotations(annotations: Annotations, initial: Config[Nothing]): Config[Nothing] =
+    private def fromAnnotations[A](annotations: Annotations[A], initial: Config[A]): Config[A] =
         val topApplied = annotations.forType.foldLeft(initial)(_.applyAnnotation(_))
 
         annotations.fields.foldLeft(topApplied) { case (prev, (name, annotations)) =>
@@ -83,22 +86,24 @@ object Config:
         }
     end fromAnnotations
 
-    private def basicProduct(annotations: Annotations): ForProduct =
+    private def basicProduct[A](annotations: Annotations[A]): ForProduct[A] =
         ForProduct(
           name = annotations.name,
-          fields = annotations.fields.map { (name, anns) => name -> ForField(name = name, annotations = anns) },
+          fields = annotations.fields.map { (name, anns) =>
+              name -> ForField(name = name, annotations = anns)
+          },
           annotations = annotations.forType,
-          isSingleton = annotations.isSingleton,
+          singleton = annotations.singleton,
         )
     end basicProduct
 
-    private def basicStructure(annotations: AllAnnotations): Config[Nothing] =
+    private def basicStructure[A](annotations: AllAnnotations[A]): Config[A] =
         Config(
           top = basicProduct(annotations.top),
           subtypes = annotations.subtypes.map((name, annots) => name -> basicStructure(annots)),
         )
 
-    private def applyAnnotations(annotations: AllAnnotations, initial: Config[Nothing]): Config[Nothing] =
+    private def applyAnnotations[A](annotations: AllAnnotations[A], initial: Config[A]): Config[A] =
         val base = fromAnnotations(annotations.top, initial = initial)
 
         base.copy(subtypes =
@@ -106,11 +111,11 @@ object Config:
         )
     end applyAnnotations
 
-    private def fromAllAnnotations(annotations: AllAnnotations): Config[Nothing] =
+    private def fromAllAnnotations[A](annotations: AllAnnotations[A]): Config[A] =
         applyAnnotations(annotations, basicStructure(annotations))
 
-    private inline def readAnnotations[T]: AllAnnotations = ${ allAnnotations[T] }
+    private inline def readAnnotations[T]: AllAnnotations[T] = ${ allAnnotations[T] }
 
-    private def allAnnotations[T: Type](using Quotes): Expr[AllAnnotations] = ConfigMacro().allAnnotations[T]
+    private def allAnnotations[T: Type](using Quotes): Expr[AllAnnotations[T]] = ConfigMacro().allAnnotations[T]
 
 end Config
