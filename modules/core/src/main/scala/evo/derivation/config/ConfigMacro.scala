@@ -9,16 +9,15 @@ class ConfigMacro(using q: Quotes):
 
     import q.reflect.*
 
-    def allAnnotations[T: Type]: Expr[AllAnnotations] =
-        val sym = TypeRepr.of[T].typeSymbol
+    def allAnnotations[T: Type]: Expr[AllAnnotations] = annotations(TypeRepr.of[T].typeSymbol)
 
+    private def annotations(sym: Symbol): Expr[AllAnnotations] =
         '{
             AllAnnotations(
               top = ${ topAnnotations(sym) },
               subtypes = ${ subtypeAnnotations(sym) },
             )
         }
-    end allAnnotations
 
     private def annotationTree(tree: Tree): Option[Expr[DA]] =
         Option.when(tree.isExpr)(tree.asExpr).filter(_.isExprOf[DA]).map(_.asExprOf[DA])
@@ -50,14 +49,14 @@ class ConfigMacro(using q: Quotes):
         }
     end topAnnotations
 
-    private def subtypeAnnotation(sym: Symbol): Expr[(String, Annotations)] =
+    private def subtypeAnnotation(sym: Symbol): Expr[(String, AllAnnotations)] =
         val name   = Expr(sym.name)
-        val annots = topAnnotations(sym)
+        val annots = annotations(sym)
 
         '{ ($name, $annots) }
     end subtypeAnnotation
 
-    private def subtypeAnnotations(sym: Symbol): Expr[Vector[(String, Annotations)]] =
+    private def subtypeAnnotations(sym: Symbol): Expr[Vector[(String, AllAnnotations)]] =
         val subtypes = Varargs(sym.children.map(subtypeAnnotation))
 
         '{ Vector($subtypes: _*) }
