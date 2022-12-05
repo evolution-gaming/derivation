@@ -1,5 +1,5 @@
 package evo.derivation
-import evo.derivation.internal.{Updater, update, updater}
+import evo.derivation.internal.{Updater, update, updater, showExpr}
 
 class UpdaterTest extends munit.FunSuite {
 
@@ -9,6 +9,8 @@ class UpdaterTest extends munit.FunSuite {
         assertEquals(name(_ => "Oleg")(person), Person("Oleg", 102))
         assertEquals(update[Person](_.age)(_ / 2)(person), Person("Johannes", 51))
     }
+
+    val p = Person("Johannes", 9)
 }
 
 case class Person(name: String, age: Int)

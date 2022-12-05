@@ -20,3 +20,10 @@ def showFlags(using q: Quotes)(flags: q.reflect.Flags): String =
         .toVector
         .mkString(",")
 end showFlags
+
+inline def showExpr(inline x: Any): Unit = ${ showExprMacro('x) }
+
+def showExprMacro(x: Expr[Any])(using q: Quotes): Expr[Unit] =
+    import q.reflect.*
+    report.info(x.asTerm.show)
+    '{ () }

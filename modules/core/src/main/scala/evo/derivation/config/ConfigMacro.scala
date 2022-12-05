@@ -22,17 +22,43 @@ class ConfigMacro(using q: Quotes):
     private def annotationTree(tree: Tree): Option[Expr[DA]] =
         Option.when(tree.isExpr)(tree.asExpr).filter(_.isExprOf[DA]).map(_.asExprOf[DA])
 
-    private def fieldAnnotations(s: Symbol): Expr[(String, Vector[DA])] =
+    private def fieldAnnotations[C: Type](s: Symbol): Expr[(String, Vector[DA], Option[FieldValueInfo[C, _]])] =
         val annots = Varargs(s.annotations.flatMap(annotationTree))
         val name   = Expr(s.name)
 
-        '{ $name -> Vector($annots: _*) }
+        def readExpr[field: Type](p: Expr[C]): Expr[field] =
+            Select.unique(p.asTerm, s.name).asExpr.asExprOf[field]
+
+        def updateExpr[field: Type](p: Expr[C], f: Expr[field], typeArgs: List[TypeRepr]): Expr[C] =
+            val tree = Select.overloaded(p.asTerm, "copy", typeArgs, List(NamedArg(s.name, f.asTerm)))
+            tree.asExpr.asExprOf[C]
+
+        val infoExpr: Expr[Option[FieldValueInfo[C, _]]] = s.tree match
+            case vd: ValDef =>
+                val info = vd.tpt.tpe.asType match
+                    case '[field] =>
+                        val targs = TypeRepr.of[C].typeArgs
+                        '{
+                            FieldValueInfo[C, field](
+                              default = None,
+                              readF = (p: C) => ${ readExpr[field]('{ p }) },
+                              updateF = (p: C, f: field) => ${ updateExpr[field]('p, 'f, targs) },
+                            )
+                        }
+                '{ Some($info) }
+            case _          => '{ None }
+
+        '{ ($name, Vector($annots: _*), $infoExpr) }
+
     end fieldAnnotations
 
     private def topAnnotations[T: Type](sym: Symbol): Expr[Annotations[T]] =
-        val topAnns                    = Varargs(sym.annotations.flatMap(annotationTree))
-        val caseParams                 = sym.primaryConstructor.paramSymss.take(1).flatten
-        val fieldAnns                  = Varargs(caseParams.map(fieldAnnotations))
+        val topAnns    = Varargs(sym.annotations.flatMap(annotationTree))
+        val caseParams = sym.primaryConstructor.paramSymss.take(1).flatten
+        val fieldAnns  = sym.typeRef.asType match
+            case '[constr] =>
+                Varargs(caseParams.map(fieldAnnotations[constr]))
+
         val name                       = Expr(sym.name)
         val singleton: Expr[Option[T]] = sym.tree match
             case _: ValDef =>

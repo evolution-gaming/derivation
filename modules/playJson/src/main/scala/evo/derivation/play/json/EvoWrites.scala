@@ -42,7 +42,7 @@ object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonForPro
         fieldInstances: LazySummon.All[Writes, mirror.MirroredElemTypes],
     ) extends EvoWrites[A]:
 
-        private def encodeField(info: ForField, json: JsValue): Vector[(String, JsValue)] =
+        private def encodeField(info: ForField[_ <: A], json: JsValue): Vector[(String, JsValue)] =
             json.validate[JsObject].asOpt match
                 case Some(obj) if info.embed => obj.value.toVector
                 case _                       => Vector(info.name -> json)
@@ -53,8 +53,8 @@ object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonForPro
 
             val fields = tupleFromProduct(a)
             type Res = Vector[(String, JsValue)]
-            val results = fieldInstances.useCollect[Res, ForField](fields, infos)(
-              [X] => (info: ForField, a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
+            val results = fieldInstances.useCollect[Res, ForField[_ <: A]](fields, infos)(
+              [X] => (info: ForField[_ <: A], a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
             )
             JsObject(results.flatten)
         end writes
