@@ -42,7 +42,6 @@ lazy val publishSettings = Vector(
   publishMavenStyle       := true,
   Test / publishArtifact  := false,
   versionScheme           := Some("early-semver"),
-  git.baseVersion         := "0.1",
   git.formattedShaVersion :=
       git.gitHeadCommit.value map { sha => s"${git.baseVersion.value}-$sha-SNAPSHOT" },
   description             := "A derivation library for scala 3 with annotation based configuration.",
