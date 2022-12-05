@@ -32,10 +32,11 @@ import scala.collection.Seq
 import scala.util.Either
 import evo.derivation.internal.Matching
 import evo.derivation.template.SummonForProduct
+import evo.derivation.template.SummonHierarchy
 
 trait EvoReads[A] extends Reads[A]
 
-object EvoReads extends ConsistentTemplate[Reads, EvoReads] with SummonForProduct:
+object EvoReads extends ConsistentTemplate[Reads, EvoReads] with SummonHierarchy:
 
     def newtype[A](using nt: ValueClass[A])(using reads: Reads[nt.Representation]): EvoReads[A] =
         json => json.validate[nt.Representation].map(nt.from)

@@ -16,10 +16,11 @@ import io.circe.Decoder.Result
 import io.circe.ACursor
 import evo.derivation.LazySummon.LazySummonByConfig
 import evo.derivation.template.SummonForProduct
+import evo.derivation.template.SummonHierarchy
 
 trait EvoDecoder[A] extends Decoder[A]
 
-object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonForProduct:
+object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonHierarchy:
 
     type Provide[A] = EvoDecoder[A]
 

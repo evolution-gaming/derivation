@@ -8,6 +8,7 @@ import evo.derivation.template.{ConsistentTemplate, SummonForProduct}
 
 import scala.compiletime.{summonFrom, summonInline}
 import scala.deriving.Mirror
+import evo.derivation.template.SummonHierarchy
 
 trait BaseEvoEq[A]:
     def eqv(x: A, y: A): Boolean
@@ -28,7 +29,7 @@ end BaseEvoEq
 trait EvoEq[A] extends BaseEvoEq[A] with cats.kernel.Eq[A] with Equiv[A]:
     def equiv(x: A, y: A): Boolean = eqv(x, y)
 
-object EvoEq extends ConsistentTemplate[BaseEvoEq, EvoEq] with SummonForProduct:
+object EvoEq extends ConsistentTemplate[BaseEvoEq, EvoEq] with SummonHierarchy:
     override def product[A](using mirror: Mirror.ProductOf[A])(fields: All[BaseEvoEq, mirror.MirroredElemTypes])(using
         => Config[A],
         A <:< Product,

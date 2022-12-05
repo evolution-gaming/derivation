@@ -31,37 +31,39 @@ object LazySummon:
 
     trait LazySummonByInstance[TC[_], A] extends LazySummon[Nothing, Nothing, TC, Nothing, A]
 
-    trait LazySummonByConfig[+TCC[_], A]:
+    trait LazySummonByConfig[+TCC[_], From, A]:
         def instance(using => Config[A]): TCC[A]
 
     given byInstance[TC[_], A](using instance: => TC[A]): LazySummonByInstance[TC, A] with
         lazy val tc = instance
 
-    given [Name <: String, From, TC[_], TCC[x] <: TC[x], A](using
-        constructor: LazySummonByConfig[TCC, A],
+    given byConfig[Name <: String, From, TC[_], TCC[x] <: TC[x], A](using
+        constructor: LazySummonByConfig[TCC, From, A],
         config: => Config[From],
         name: ValueOf[Name],
     ): LazySummon[Name, From, TC, TCC, A] with
-        def tc: TC[A] = constructor.instance(using config.constructor(name.value).as[A])
-    end given
+        def tc: TC[A] = constructor.instance(using config.subordinate(name.value).as[A])
+    end byConfig
 
     inline def all[Names <: Tuple, From, TC[_], TCC[x], Fields <: Tuple]: All[TC, Fields] =
-        type Summons = Tuple.Map[Tuple.Zip[Names, Fields], [A] =>> Applied[TC, TCC, From, A]]
-
         allIter[From, TC, TCC](erasedValue[Names], erasedValue[Fields]).toIArray.map(_.asInstanceOf[Of[TC]])
 
     private inline def allIter[From, TC[_], TCC[x]](inline names: Tuple, inline fields: Tuple): Tuple =
         inline fields match
             case _: (req *: restFields) =>
                 inline names match
-                    case _: (name *: restNames) =>
+                    case t: (name *: restNames) =>
                         type Req  = req
                         type Name = name
                         val head = summonFrom {
-                            case lzq: LazySummon[Name, From, TC, TCC, Req] =>
-                                lzq
+                            case lzq: LazySummon[Name, From, TC, TCC, Req] => lzq
                             case _                                         =>
-                                printWarning("during derivation for field or constructor " + constValue[name] + " of " + showType[From])
+                                printWarning(
+                                  "during derivation for field or constructor " +
+                                      constValue[name] +
+                                      " of " +
+                                      showType[From],
+                                )
                                 LazySummon.byInstance(using summonInline[TC[req]])
                         }
                         head *: allIter[From, TC, TCC](erasedValue[restNames], erasedValue[restFields])
