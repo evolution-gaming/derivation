@@ -7,6 +7,8 @@ ThisBuild / scalaVersion := Version.scala
 
 ThisBuild / organization := "com.evolution"
 
+ThisBuild / versionScheme      := Some("early-semver")
+
 testFrameworks += new TestFramework("munit.Framework")
 
 val scala3Settings = scalacOptions ++= Vector(
@@ -42,8 +44,6 @@ lazy val publishSettings = Vector(
   publishMavenStyle       := true,
   Test / publishArtifact  := false,
   versionScheme           := Some("early-semver"),
-  git.formattedShaVersion :=
-      git.gitHeadCommit.value map { sha => s"${git.baseVersion.value}-$sha-SNAPSHOT" },
   description             := "A derivation library for scala 3 with annotation based configuration.",
   scmInfo                 := Some(
     ScmInfo(
