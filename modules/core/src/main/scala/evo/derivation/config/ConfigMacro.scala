@@ -29,15 +29,20 @@ class ConfigMacro(using q: Quotes):
         def readExpr[field: Type](p: Expr[C]): Expr[field] =
             Select.unique(p.asTerm, s.name).asExpr.asExprOf[field]
 
+        def updateExpr[field: Type](p: Expr[C], f: Expr[field], typeArgs: List[TypeRepr]): Expr[C] =
+            val tree = Select.overloaded(p.asTerm, "copy", typeArgs, List(NamedArg(s.name, f.asTerm)))
+            tree.asExpr.asExprOf[C]
+
         val infoExpr: Expr[Option[FieldValueInfo[C, _]]] = s.tree match
             case vd: ValDef =>
                 val info = vd.tpt.tpe.asType match
                     case '[field] =>
+                        val targs = TypeRepr.of[C].typeArgs
                         '{
                             FieldValueInfo[C, field](
                               default = None,
                               readF = (p: C) => ${ readExpr[field]('{ p }) },
-                              updateF = (p: C, f: field) => p,
+                              updateF = (p: C, f: field) => ${ updateExpr[field]('p, 'f, targs) },
                             )
                         }
                 '{ Some($info) }

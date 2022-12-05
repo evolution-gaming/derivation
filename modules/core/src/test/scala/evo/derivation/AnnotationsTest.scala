@@ -5,6 +5,7 @@ import evo.derivation.config.{Config, ForField}
 import scala.CanEqual.derived
 import evo.derivation.AnnotationTest.Gorynych
 import evo.derivation.config.ForProduct
+import evo.derivation.config.FieldValueInfo
 
 class AnnotationsTest extends munit.FunSuite:
     extension [T](ff: ForField[T]) def noInfo = ff.copy(info = None)
@@ -63,7 +64,23 @@ class AnnotationsTest extends munit.FunSuite:
         assertEquals(
           izCfg.top match
               case fp: ForProduct[Izbushka, Izbushka] =>
+                  fp.byField("ping").info.map { case valI: FieldValueInfo[_, f] =>
+                      valI.update(izbushka, "pong".asInstanceOf[f])
+                  }
+              case _                                  => fail("bad patmat")
+          ,
+          Some(Izbushka(ping = "pong")),
+        )
+    }
+
+    test("simple field put") {
+        val izbushka = Izbushka(ping = "ping")
+        val izCfg    = summon[Config[Izbushka]]
+        assertEquals(
+          izCfg.top match
+              case fp: ForProduct[Izbushka, Izbushka] =>
                   fp.byField("ping").info.map(valI => valI.read(izbushka))
+              case _                                  => fail("bad patmat")
           ,
           Some("ping"),
         )
