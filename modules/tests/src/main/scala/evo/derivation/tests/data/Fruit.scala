@@ -24,9 +24,3 @@ enum Citrus extends Fruit:
 enum Milky extends Dessert:
     case TiraMiSu
     case Yoghurt(fat: Double)
-
-// object Fruit:
-    // summon[LazySummon["Lemon", Citrus, Decoder, EvoDecoder, Citrus.Lemon.type]](
-    //     using LazySummon.byConfig["Lemin", Citrus]
-    // )
-    // summon[LazySummon["Citrus", Fruit, Decoder, EvoDecoder, Citrus]]
