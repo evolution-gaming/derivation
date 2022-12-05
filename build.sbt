@@ -54,8 +54,6 @@ lazy val publishSettings = Vector(
   licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
 )
 
-enablePlugins(GitVersioning)
-
 val defaultSettings = testDependencies ++ scala3Settings ++ publishSettings
 
 val modules = file("modules")
