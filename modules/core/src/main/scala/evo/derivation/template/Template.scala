@@ -69,6 +69,10 @@ trait Template:
         new:
             def instance(using => Config[A]): Provide[A] = deriveForProduct[A]
 
+    inline def lazySummonForSum[A: Mirror.SumOf]: LazySummonByConfig[Provide, A] =
+        new:
+            def instance(using => Config[A]): Provide[A] = deriveForSum[A]
+
     private[template] inline def deriveForSum[A](using
         config: => Config[A],
         mirror: Mirror.SumOf[A],
