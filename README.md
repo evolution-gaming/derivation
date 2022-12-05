@@ -2,6 +2,7 @@
 
  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
  [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.evolution/derivation-core_3/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.evolution/derivation-core_3)
+[![Sonatype Nexus (Snapshots) badge](https://img.shields.io/nexus/s/https/s01.oss.sonatype.org/com.evolution/derivation-core_3.svg)](https://s01.oss.sonatype.org/content/repositories/snapshots/com/evolution/derivation-core_3/)
  [![Build](https://github.com/evolution-gaming/derivation/actions/workflows/scala.yml/badge.svg)](https://github.com/evolution-gaming/derivation/actions/workflows/scala.yml)
 
 A derivation library for scala 3 with annotation based configuration.
