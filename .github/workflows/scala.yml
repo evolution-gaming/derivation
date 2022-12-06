@@ -7,9 +7,9 @@ on:
   pull_request:
     branches: [ "base" ]
   workflow_dispatch:
-
-permissions:
-  contents: read
+  
+env:
+  CI: true
 
 jobs:
   build:
