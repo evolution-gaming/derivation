@@ -9,6 +9,7 @@ import evo.derivation.template.Template
 import evo.derivation.{LazySummon, ValueClass}
 import io.circe.{Encoder, Json, JsonObject}
 import evo.derivation.template.SummonForProduct
+import evo.derivation.template.SummonHierarchy
 
 trait EvoEncoder[A] extends Encoder[A]
 
@@ -61,7 +62,7 @@ abstract class EvoTemplateEncoder extends Template:
         end encodeObject
 end EvoTemplateEncoder
 
-object EvoEncoder extends EvoTemplateEncoder with SummonForProduct:
+object EvoEncoder extends EvoTemplateEncoder with SummonHierarchy:
     final type OfNewtype[A] = Encoder[A]
 
     final type Provide[A] = EvoEncoder[A]
@@ -73,7 +74,7 @@ end EvoEncoder
 
 trait EvoObjectEncoder[A] extends EvoEncoder[A] with Encoder.AsObject[A]
 
-object EvoObjectEncoder extends EvoTemplateEncoder with SummonForProduct:
+object EvoObjectEncoder extends EvoTemplateEncoder with SummonHierarchy:
     final type OfNewtype[A] = Encoder.AsObject[A]
 
     final type Provide[A] = EvoObjectEncoder[A]

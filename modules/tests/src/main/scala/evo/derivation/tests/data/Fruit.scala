@@ -1,9 +1,14 @@
 package evo.derivation.tests.data
 import evo.derivation.config.Config
+import evo.derivation.circe.EvoCodec
+import evo.derivation.play.json.EvoFormat
+import evo.derivation.cats.EvoEq
+import evo.derivation.LazySummon
+import io.circe.Decoder
 
 sealed trait Dessert derives Config
 
-sealed trait Fruit extends Dessert derives Config
+sealed trait Fruit extends Dessert derives Config, EvoCodec, EvoFormat, EvoEq
 
 sealed trait Amygdaloideae extends Fruit
 

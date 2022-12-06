@@ -15,10 +15,11 @@ import evo.derivation.config.{Config, ForField}
 import evo.derivation.template.{ConsistentTemplate, SummonForProduct}
 import play.api.libs.json.*
 import play.api.libs.json.Writes
+import evo.derivation.template.SummonHierarchy
 
 trait EvoWrites[A] extends Writes[A]
 
-object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonForProduct:
+object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonHierarchy:
 
     override def product[A](using mirror: Mirror.ProductOf[A])(
         fields: All[Writes, mirror.MirroredElemTypes],

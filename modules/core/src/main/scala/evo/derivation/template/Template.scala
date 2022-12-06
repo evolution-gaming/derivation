@@ -60,23 +60,27 @@ trait Template:
     inline def derived[A](using config: => Config[A]): Provide[A] =
         summonFrom {
             case mirror: Mirror.ProductOf[A] => deriveForProduct[A]
-            case given Mirror.SumOf[A]       => deriveForSum[A]
+            case given Mirror.SumOf[A]       => deriveForSum[A, A]
             case given ValueClass[A]         => deriveForNewtype[A]
             case _                           => underiveableError[Provide[A], A]
         }
 
-    inline def lazySummonForProduct[A: Mirror.ProductOf]: LazySummonByConfig[Provide, A] =
+    inline def lazySummonForProduct[From, A: Mirror.ProductOf]: LazySummonByConfig[Provide, From, A] =
         new:
             def instance(using => Config[A]): Provide[A] = deriveForProduct[A]
 
-    private[template] inline def deriveForSum[A](using
+    inline def lazySummonForSum[From, A: Mirror.SumOf]: LazySummonByConfig[Provide, From, A] =
+        new:
+            def instance(using => Config[A]): Provide[A] = deriveForSum[From, A]
+
+    private[template] inline def deriveForSum[From, A](using
         config: => Config[A],
         mirror: Mirror.SumOf[A],
     ): Provide[A] =
         given Matching[A] = Matching.create[A]
 
         val fieldInstances =
-            LazySummon.all[mirror.MirroredElemLabels, A, OfSubtype, Provide, mirror.MirroredElemTypes]
+            LazySummon.all[mirror.MirroredElemLabels, From, OfSubtype, Provide, mirror.MirroredElemTypes]
 
         val names = mirroredNames[A]
 
@@ -116,4 +120,9 @@ end ConsistentTemplate
 trait HomogenicTemplate[TC[_]] extends ConsistentTemplate[TC, TC]
 
 trait SummonForProduct extends Template:
-    inline given [A: Mirror.ProductOf]: LazySummonByConfig[Provide, A] = lazySummonForProduct
+    inline given [From, A: Mirror.ProductOf]: LazySummonByConfig[Provide, From, A] = lazySummonForProduct
+
+trait SummonForSubtype extends Template:
+    inline given [From, A: Mirror.SumOf]: LazySummonByConfig[Provide, From, A] = lazySummonForSum
+
+trait SummonHierarchy extends SummonForProduct with SummonForSubtype

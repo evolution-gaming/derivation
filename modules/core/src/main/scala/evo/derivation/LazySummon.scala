@@ -2,14 +2,16 @@ package evo.derivation
 
 import evo.derivation.config.Config
 import scala.annotation.implicitNotFound
-import scala.compiletime.{summonAll, uninitialized, erasedValue}
+import scala.compiletime.{summonAll, uninitialized, erasedValue, summonFrom, error, constValue, summonInline}
 import scala.reflect.ClassTag.apply
 import scala.reflect.ClassTag
 import internal.arrays.*
+import internal.{printWarning, showType}
+import compiletime.erasedValue
+import scala.quoted.Quotes
+import scala.quoted.Expr
+import scala.quoted.Type
 
-@implicitNotFound(
-  "can't find given instance of ${TC} for ${A} that's required for field or constructor ${Name} of type ${From}",
-)
 trait LazySummon[+Name, +From, TC[_], +TCC[x], A]:
     type FieldType = A
     def tc: TC[A]
@@ -29,23 +31,44 @@ object LazySummon:
 
     trait LazySummonByInstance[TC[_], A] extends LazySummon[Nothing, Nothing, TC, Nothing, A]
 
-    trait LazySummonByConfig[+TCC[_], A]:
+    trait LazySummonByConfig[+TCC[_], From, A]:
         def instance(using => Config[A]): TCC[A]
 
-    given [TC[_], A](using instance: => TC[A]): LazySummonByInstance[TC, A] with
+    given byInstance[TC[_], A](using instance: => TC[A]): LazySummonByInstance[TC, A] with
         lazy val tc = instance
 
-    given [Name <: String, From, TC[_], TCC[x] <: TC[x], A](using
-        constructor: LazySummonByConfig[TCC, A],
+    given byConfig[Name <: String, From, TC[_], TCC[x] <: TC[x], A](using
+        constructor: LazySummonByConfig[TCC, From, A],
         config: => Config[From],
         name: ValueOf[Name],
     ): LazySummon[Name, From, TC, TCC, A] with
-        def tc: TC[A] = constructor.instance(using config.constructor(name.value).as[A])
-    end given
+        def tc: TC[A] = constructor.instance(using config.subordinate(name.value).as[A])
+    end byConfig
 
     inline def all[Names <: Tuple, From, TC[_], TCC[x], Fields <: Tuple]: All[TC, Fields] =
-        type Summons = Tuple.Map[Tuple.Zip[Names, Fields], [A] =>> Applied[TC, TCC, From, A]]
-        summonAll[Summons].toIArray.map(_.asInstanceOf[Of[TC]])
+        allIter[From, TC, TCC](erasedValue[Names], erasedValue[Fields]).toIArray.map(_.asInstanceOf[Of[TC]])
+
+    private inline def allIter[From, TC[_], TCC[x]](inline names: Tuple, inline fields: Tuple): Tuple =
+        inline fields match
+            case _: (req *: restFields) =>
+                inline names match
+                    case t: (name *: restNames) =>
+                        type Req  = req
+                        type Name = name
+                        val head = summonFrom {
+                            case lzq: LazySummon[Name, From, TC, TCC, Req] => lzq
+                            case _                                         =>
+                                printWarning(
+                                  "during derivation for field or constructor " +
+                                      constValue[name] +
+                                      " of " +
+                                      showType[From],
+                                )
+                                LazySummon.byInstance(using summonInline[TC[req]])
+                        }
+                        head *: allIter[From, TC, TCC](erasedValue[restNames], erasedValue[restFields])
+            case _: EmptyTuple          => EmptyTuple
+    end allIter
 
     extension [TC[_], Fields <: Tuple](all: All[TC, Fields])
         def useOn[Src[_], Res[_]](fields: Tuple.Map[Fields, Src])(

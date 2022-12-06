@@ -33,20 +33,24 @@ case class Config[+T](
     def name(constructor: String): String =
         byConstructor.get(constructor).map(_.name).getOrElse(constructor)
 
-    def constructor(name: String): Config[Any] =
-        byConstructor.get(name).fold(Config.named(name))(p => Config(top = p))
+    def subordinate(name: String): Config[Any] = bySubordinate.get(name).getOrElse(Config.named(name))
 
     def as[T]: Config[T] = asInstanceOf[Config[T]]
 
     def isConstructor = subtypes.isEmpty
 
+    lazy val subordinates: Vector[(String, Config[T])] =
+        subtypes.flatMap((name, t) => (name -> t) +: t.subordinates)
+
     lazy val constructors: Vector[(String, ForProduct[T, _ <: T])] =
-        subtypes.flatMap((name, t) => if t.isConstructor then Array(name -> t.top) else t.constructors)
+        subordinates.collect { case (name, t) if t.isConstructor => name -> t.top }
 
     lazy val constrFromRenamed: Map[String, String] =
         byConstructor.map((name, prod) => prod.name -> name)
 
     lazy val byConstructor: Map[String, ForProduct[T, _]] = constructors.toMap
+
+    lazy val bySubordinate: Map[String, Config[T]] = subordinates.toMap
 
     lazy val isSimpleEnum = top.fields.isEmpty && !constructors.isEmpty && constructors.forall(_._2.isSingleton)
 
