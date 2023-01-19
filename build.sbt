@@ -7,7 +7,7 @@ ThisBuild / scalaVersion := Version.scala
 
 ThisBuild / organization := "com.evolution"
 
-ThisBuild / versionScheme      := Some("early-semver")
+ThisBuild / versionScheme := Some("early-semver")
 
 testFrameworks += new TestFramework("munit.Framework")
 
@@ -23,11 +23,11 @@ val testDependencies = libraryDependencies ++= Vector(
 )
 
 ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org"
-ThisBuild / sonatypeRepository := "https://s01.oss.sonatype.org/service/local"
+ThisBuild / sonatypeRepository     := "https://s01.oss.sonatype.org/service/local"
 
 lazy val publishSettings = Vector(
-  homepage                := Some(url("https://github.com/evolution-gaming/derivation")),
-  developers              := List(
+  homepage               := Some(url("https://github.com/evolution-gaming/derivation")),
+  developers             := List(
     Developer(
       "Odomontois",
       "Oleg Nizhnik",
@@ -41,11 +41,11 @@ lazy val publishSettings = Vector(
       url("https://github.com/FunFunFine"),
     ),
   ),
-  publishMavenStyle       := true,
-  Test / publishArtifact  := false,
-  versionScheme           := Some("early-semver"),
-  description             := "A derivation library for scala 3 with annotation based configuration.",
-  scmInfo                 := Some(
+  publishMavenStyle      := true,
+  Test / publishArtifact := false,
+  versionScheme          := Some("early-semver"),
+  description            := "A derivation library for scala 3 with annotation based configuration.",
+  scmInfo                := Some(
     ScmInfo(
       url("https://github.com/evolution-gaming/derivation"),
       "git@github.com:evolution-gaming/derivation.git",
