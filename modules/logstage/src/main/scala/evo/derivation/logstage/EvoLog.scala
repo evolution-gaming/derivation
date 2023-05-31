@@ -31,6 +31,7 @@ trait EvoLogTemplate extends HomogenicTemplate[EvoLog], SummonHierarchy:
         (writer, a) =>
             val fields = tupleFromProduct(a)
 
+            // TODO: support embed
             writer.openMap()
             all.useForeach[Unit, ForField[_]](fields, infos) {
                 [X] =>
@@ -55,17 +56,19 @@ trait EvoLogTemplate extends HomogenicTemplate[EvoLog], SummonHierarchy:
             val constructor  = matching.matched(a)
             val discrimValue = cfg.name(constructor)
 
-            (codecs.get(constructor), cfg.discriminator) match
-                case (Some(codec), _) =>    // TODO: support discriminator
-                    writer.openMap()
-                    writer.nextMapElementOpen()
-                    LogstageCodec[String].write(writer, discrimValue)
-                    writer.mapElementSplitter()
-                    codec.write(writer, a)
-                    writer.nextMapElementClose()
-                    writer.closeMap()
-                case (None, _)        => () // throw exception ?
-            end match
+            // TODO: support discriminator
+            codecs
+                .get(constructor)
+                .foreach( // throw exception if empty?
+                  codec =>
+                      writer.openMap()
+                      writer.nextMapElementOpen()
+                      LogstageCodec[String].write(writer, discrimValue)
+                      writer.mapElementSplitter()
+                      codec.write(writer, a)
+                      writer.nextMapElementClose()
+                      writer.closeMap(),
+                )
     end sum
 
     override def newtype[A](using nt: ValueClass[A])(using codec: EvoLog[nt.Representation]): EvoLog[A] =
