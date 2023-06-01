@@ -1,10 +1,11 @@
 package evo.derivation.logstage
 
 import evo.derivation.config.Config
-import io.circe.Json
+import io.circe.{Json, Encoder}
 import logstage.LogstageCodec
+import logstage.circe.LogstageCirceCodec
 import izumi.logstage.api.rendering.json.LogstageCirceWriter
-import EvoLogTest.{WithProps, OneOf, SimpleRec}
+import EvoLogTest.{WithProps, OneOf, SimpleRec, Custom, OneOfCustom}
 import evo.derivation.{Discriminator, Embed, Rename, SnakeCase}
 import izumi.logstage.api.rendering.{LogstageCodec, LogstageWriter}
 import io.circe.parser.parse
@@ -81,6 +82,57 @@ class LogstageTest extends munit.FunSuite:
         )
     }
 
+    test("simple recursive data") {
+        val chebKekLol =
+            """
+              |{
+              |  "bazar" : {
+              |    "foo" : {
+              |      "bazar" : {
+              |        "foo" : {
+              |          "bazar" : {
+              |            "foo" : {
+              |              "no" : {}
+              |            },
+              |            "param" : "cheb"
+              |          }
+              |        },
+              |        "param" : "kek"
+              |      }
+              |    },
+              |    "param" : "lol"
+              |  }
+              |}
+              |""".stripMargin
+
+        assertEquals(
+          parse(chebKekLol),
+          Right(
+            (SimpleRec.Bar(SimpleRec.Bar(SimpleRec.Bar(SimpleRec.No, "cheb"), "kek"), "lol"): SimpleRec).toLog,
+          ),
+        )
+    }
+
+    test("with custom instance") {
+        val customJson =
+            """
+              |{
+              |  "variant" : {
+              |    "foo" : 100
+              |  },
+              |  "props" : {
+              |    "lol" : "zoo"
+              |  }
+              |}
+              |""".stripMargin
+
+        assertEquals(
+          parse(customJson),
+          Right(
+            Custom(OneOfCustom.Case2(100), Map("lol" -> "zoo")).toLog,
+          ),
+        )
+    }
 end LogstageTest
 
 object EvoLogTest:
@@ -97,4 +149,22 @@ object EvoLogTest:
         case Case3(param: String)
 
     case class WithProps(@Embed variant: OneOf, props: Map[String, String]) derives Config, EvoLog
+
+    enum OneOfCustom:
+        case Case1(foo: Int, param: String)
+        case Case2(foo: Int)
+        case Case3(param: String)
+
+    object OneOfCustom:
+        given Encoder[OneOfCustom] = Encoder.instance {
+            case OneOfCustom.Case1(foo, _) => Json.obj("foo" -> Json.fromInt(foo))
+            case OneOfCustom.Case2(foo)    => Json.obj("foo" -> Json.fromInt(foo))
+            case OneOfCustom.Case3(_)      => Json.obj()
+        }
+
+        given LogstageCodec[OneOfCustom] = LogstageCirceCodec.derived
+    end OneOfCustom
+
+    // Embed is ignored in this case
+    case class Custom(@Embed variant: OneOfCustom, props: Map[String, String]) derives Config, EvoLog
 end EvoLogTest

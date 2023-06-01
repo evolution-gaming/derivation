@@ -11,16 +11,21 @@ import logstage.LogstageCodec
 import scala.deriving.Mirror
 import scala.deriving.Mirror.SumOf
 
-// Unable to extend LogstageCodec here due to problems with derivations for contravariant type classes
+/** Unable to extend LogstageCodec here due to problems with derivations for contravariant type classes
+  *
+  * LogstageWriter api is too strict to support @Embed, @Discriminator annotations here without additional methods such
+  * as `writeInner`
+  */
 trait EvoLog[A]:
     def write(writer: LogstageWriter, value: A): Unit
-    def writeInner(writer: LogstageWriter, value: A): Unit
+    def writeInner: Option[(LogstageWriter, A) => Unit]
+end EvoLog
 
 object EvoLog extends EvoLogTemplate:
     def fromLogstage[A](using codec: => LogstageCodec[A]): EvoLog[A] =
         new EvoLog[A]:
-            override def writeInner(writer: LogstageWriter, value: A): Unit = codec.write(writer, value)
-            override def write(writer: LogstageWriter, value: A): Unit      = codec.write(writer, value)
+            override def writeInner: Option[(LogstageWriter, A) => Unit] = None
+            override def write(writer: LogstageWriter, value: A): Unit   = codec.write(writer, value)
 
     given [A](using LogstageCodec[A]): EvoLog[A] = fromLogstage
 end EvoLog
@@ -34,24 +39,29 @@ trait EvoLogTemplate extends HomogenicTemplate[EvoLog], SummonHierarchy:
         new EvoLog[A]:
             override def write(writer: LogstageWriter, value: A): Unit =
                 writer.openMap()
-                writeInner(writer, value)
+                writeInnerImpl(writer, value)
                 writer.closeMap()
 
-            override def writeInner(writer: LogstageWriter, value: A): Unit =
+            override val writeInner: Option[(LogstageWriter, A) => Unit] =
+                Some(writeInnerImpl)
+
+            def writeInnerImpl(writer: LogstageWriter, value: A): Unit =
                 val fields = tupleFromProduct(value)
 
                 all.useForeach[Unit, ForField[_]](fields, infos) {
                     [X] =>
                         (info: ForField[_], a: X, codec: EvoLog[X]) =>
-                            if (info.embed) codec.writeInner(writer, a)
-                            else
-                                writer.nextMapElementOpen()
-                                LogstageCodec[String].write(writer, info.name)
-                                writer.mapElementSplitter()
-                                codec.write(writer, a)
-                                writer.nextMapElementClose()
+                            codec.writeInner
+                                .filter(_ => info.embed)
+                                .fold {
+                                    writer.nextMapElementOpen()
+                                    LogstageCodec[String].write(writer, info.name)
+                                    writer.mapElementSplitter()
+                                    codec.write(writer, a)
+                                    writer.nextMapElementClose()
+                                }(_(writer, a))
                 }
-            end writeInner
+            end writeInnerImpl
         end new
     end product
 
@@ -65,30 +75,33 @@ trait EvoLogTemplate extends HomogenicTemplate[EvoLog], SummonHierarchy:
         new EvoLog[A]:
             override def write(writer: LogstageWriter, value: A): Unit =
                 writer.openMap()
-                writeInner(writer, value)
+                writeInnerImpl(writer, value)
                 writer.closeMap()
 
-            override def writeInner(writer: LogstageWriter, value: A): Unit =
+            override val writeInner: Option[(LogstageWriter, A) => Unit] =
+                Some(writeInnerImpl)
+
+            def writeInnerImpl(writer: LogstageWriter, value: A): Unit =
                 val constructor  = matching.matched(value)
                 val discrimValue = cfg.name(constructor)
 
-                (codecs.get(constructor), config.discriminator) match
-                    case (Some(codec), Some(discr)) =>
+                (codecs.get(constructor).map(c => (c, c.writeInner)), config.discriminator) match
+                    case (Some((_, Some(writeInn))), Some(discr)) =>
                         writer.nextMapElementOpen()
                         LogstageCodec[String].write(writer, discr)
                         writer.mapElementSplitter()
                         LogstageCodec[String].write(writer, discrimValue)
                         writer.nextMapElementClose()
-                        codec.writeInner(writer, value)
-                    case (Some(codec), None)        =>
+                        writeInn(writer, value)
+                    case (Some(codec, _), _)                      =>
                         writer.nextMapElementOpen()
                         LogstageCodec[String].write(writer, discrimValue)
                         writer.mapElementSplitter()
                         codec.write(writer, value)
                         writer.nextMapElementClose()
-                    case (_, _)                     => () // throw exception
+                    case (_, _)                                   => () // throw exception ?
                 end match
-            end writeInner
+            end writeInnerImpl
         end new
     end sum
 
@@ -97,6 +110,6 @@ trait EvoLogTemplate extends HomogenicTemplate[EvoLog], SummonHierarchy:
             override def write(writer: LogstageWriter, value: A): Unit =
                 codec.write(writer, nt.to(value))
 
-            override def writeInner(writer: LogstageWriter, value: A): Unit =
-                codec.write(writer, nt.to(value))
+            override val writeInner: Option[(LogstageWriter, A) => Unit] =
+                codec.writeInner.map(impl => (writer: LogstageWriter, value: A) => impl(writer, nt.to(value)))
 end EvoLogTemplate
