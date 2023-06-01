@@ -51,12 +51,9 @@ class LogstageTest extends munit.FunSuite:
         val case1 =
             """
             |{
-            |  "variant" : {
-            |    "Case1" : {
-            |      "foo" : 1,
-            |      "param" : "cheb"
-            |    }
-            |  },
+            |  "type" : "Case1",
+            |  "foo" : 1,
+            |  "param" : "cheb",
             |  "props" : {
             |    "lol" : "kek",
             |    "sad" : "pet"
@@ -72,11 +69,8 @@ class LogstageTest extends munit.FunSuite:
         val case2 =
             """
             |{
-            |  "variant" : {
-            |    "Case2" : {
-            |      "foo" : 10
-            |    }
-            |  },
+            |  "type" : "Case2",
+            |  "foo": 10,
             |  "props" : {}
             |}
             |""".stripMargin
@@ -96,10 +90,11 @@ object EvoLogTest:
         case No
         case Bazz(i: Int)
 
+    @Discriminator("type")
     enum OneOf derives Config, EvoLog:
         case Case1(foo: Int, param: String)
         case Case2(foo: Int)
         case Case3(param: String)
 
-    case class WithProps(variant: OneOf, props: Map[String, String]) derives Config, EvoLog
+    case class WithProps(@Embed variant: OneOf, props: Map[String, String]) derives Config, EvoLog
 end EvoLogTest
