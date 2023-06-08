@@ -51,15 +51,29 @@ trait EvoLogTemplate extends HomogenicTemplate[EvoLog], SummonHierarchy:
                 all.useForeach[Unit, ForField[_]](fields, infos) {
                     [X] =>
                         (info: ForField[_], a: X, codec: EvoLog[X]) =>
-                            codec.writeInner
-                                .filter(_ => info.embed)
-                                .fold {
-                                    writer.nextMapElementOpen()
-                                    LogstageCodec[String].write(writer, info.name)
-                                    writer.mapElementSplitter()
-                                    codec.write(writer, a)
-                                    writer.nextMapElementClose()
-                                }(_(writer, a))
+                            val maskOpt = info.annotations.collectFirst { case Masked(mask) => mask }
+                            val writeField = (writer: LogstageWriter, a: X) =>
+                                maskOpt.fold(codec.write(writer, a))(mask =>
+                                    LogstageCodec[String].write(writer, mask)
+                                )
+
+                            val writeFieldInner =
+                                codec.writeInner.map(f =>
+                                    (writer: LogstageWriter, a: X) =>
+                                        maskOpt.fold(f(writer, a))(mask =>
+                                            LogstageCodec[String].write(writer, info.name)
+                                            writer.mapElementSplitter()
+                                            LogstageCodec[String].write(writer, mask)
+                                        )
+                                )
+
+                            writeFieldInner.filter(_ => info.embed).fold {
+                                writer.nextMapElementOpen()
+                                LogstageCodec[String].write(writer, info.name)
+                                writer.mapElementSplitter()
+                                writeField(writer, a)
+                                writer.nextMapElementClose()
+                            }(_(writer, a))
                 }
             end writeInnerImpl
         end new
