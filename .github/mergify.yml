@@ -4,9 +4,9 @@ pull_request_rules:
       - author=evolution-scala-bot[bot]
     actions:
       request_reviews:
-        users: [ Odomontois, FunFunFine ]
+        users: [Odomontois, FunFunFine]
       label:
-        add: [ dependency-update ]
+        add: [dependency-update]
 
   - name: Merge Steward's PRs
     conditions:
@@ -24,8 +24,3 @@ pull_request_rules:
       merge:
         method: rebase
 
-  - name: Delete head branch after merge
-    conditions:
-      - merged
-    actions:
-      delete_head_branch:
