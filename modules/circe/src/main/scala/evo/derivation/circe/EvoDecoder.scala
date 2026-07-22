@@ -24,7 +24,9 @@ object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonHie
 
     type Provide[A] = EvoDecoder[A]
 
-    def product[A](using mirror: Mirror.ProductOf[A])(
+    def product[A](using
+        mirror: Mirror.ProductOf[A],
+    )(
         fields: LazySummon.All[Decoder, mirror.MirroredElemTypes],
     )(using config: => Config[A], ev: A <:< Product): EvoDecoder[A] = new:
 
@@ -35,7 +37,6 @@ object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonHie
         )(decoder: LazySummon.Of[Decoder], info: ForField[_ <: A]): Decoder.Result[decoder.FieldType] =
             val cursor = if info.embed then cur else cur.downField(info.name)
             decoder.use(cursor.as[decoder.FieldType])
-        end onField
 
         def apply(cur: HCursor): Decoder.Result[A] =
             fields.useEitherFast(infos)(onField(cur)) match
@@ -48,7 +49,9 @@ object EvoDecoder extends ConsistentTemplate[Decoder, EvoDecoder] with SummonHie
                 case Left(_)            => Validated.invalidNel(DecodingFailure("unknown error", Nil))
                 case Right(tuple)       => Validated.Valid(mirror.fromProduct(tuple))
 
-    def sum[A](using mirror: Mirror.SumOf[A])(
+    def sum[A](using
+        mirror: Mirror.SumOf[A],
+    )(
         subs: LazySummon.All[Decoder, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, Decoder[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoDecoder[A] = new:

@@ -131,7 +131,7 @@ object LazySummon:
                     case _                => true
             }
             if err
-            then Left(errors.result)
+            then Left(errors.result())
             else Right(Tuple.fromIArray(elements.result()).asInstanceOf[Fields])
         end useEithers
 

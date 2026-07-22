@@ -81,7 +81,6 @@ class ConfigMacro(using q: Quotes):
         val annots = annotations(sym)
 
         '{ ($name, $annots) }
-    end subtypeAnnotation
 
     private def subtypeAnnotations[T: Type](sym: Symbol): Expr[Vector[(String, AllAnnotations[T])]] =
         val subtypes = Varargs(sym.children.map(subtypeAnnotation))

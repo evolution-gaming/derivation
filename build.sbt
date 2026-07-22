@@ -15,13 +15,21 @@ ThisBuild / organizationHomepage := Some(url("https://evolution.com"))
 
 ThisBuild / versionScheme := Some("early-semver")
 
-testFrameworks += new TestFramework("munit.Framework")
+testFrameworks += TestFrameworks.MUnit
+
+addCommandAlias("fmt", "scalafmtRepo")
+//addCommandAlias("check", "all versionPolicyCheck Compile/doc scalafmtCheckRepo")
+addCommandAlias("check", "+scalafmtCheckRepo")
+addCommandAlias("build", "+all compile test")
 
 val scala3Settings = scalacOptions ++= Vector(
   "-Yexplicit-nulls",
+  "-Yshow-suppressed-errors",
   "-encoding",
   "utf-8",
-  "-Yshow-suppressed-errors",
+  "--explain",
+  "--explain-types",
+  "--deprecation",
 )
 
 val testDependencies = libraryDependencies ++= Vector(
@@ -47,7 +55,7 @@ lazy val publishSettings = Vector(
   publishMavenStyle      := true,
   Test / publishArtifact := false,
   versionScheme          := Some("early-semver"),
-  description            := "A derivation library for scala 3 with annotation based configuration.",
+  description            := "A derivation library for Scala 3 with annotation based configuration.",
   scmInfo                := Some(
     ScmInfo(
       url("https://github.com/evolution-gaming/derivation"),
@@ -55,7 +63,6 @@ lazy val publishSettings = Vector(
     ),
   ),
   licenses += ("MIT", url("https://opensource.org/licenses/MIT")),
-  releaseCrossBuild      := true,
   publishTo              := Some(Resolver.evolutionReleases),
 )
 
@@ -121,7 +128,7 @@ lazy val playJson = project
     .in(modules / "playJson")
     .settings(
       name                                       := "derivation-play-json",
-      libraryDependencies += "com.typesafe.play" %% "play-json" % Version.playJson cross CrossVersion.for3Use2_13,
+      libraryDependencies += "org.playframework" %% "play-json" % Version.playJson,
       defaultSettings,
     )
     .dependsOn(derivation)

@@ -21,14 +21,18 @@ trait EvoWrites[A] extends Writes[A]
 
 object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonHierarchy:
 
-    override def product[A](using mirror: Mirror.ProductOf[A])(
+    override def product[A](using
+        mirror: Mirror.ProductOf[A],
+    )(
         fields: All[Writes, mirror.MirroredElemTypes],
     )(using => Config[A], A <:< Product): EvoWrites[A] =
         ProductWrites(fields)
 
     /** called for the sealed trait \ enum derivation
       */
-    override def sum[A](using mirror: Mirror.SumOf[A])(
+    override def sum[A](using
+        mirror: Mirror.SumOf[A],
+    )(
         subs: All[Writes, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, Writes[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoWrites[A] =
@@ -54,8 +58,8 @@ object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonHierar
 
             val fields = tupleFromProduct(a)
             type Res = Vector[(String, JsValue)]
-            val results = fieldInstances.useCollect[Res, ForField[_ <: A]](fields, infos)(
-              [X] => (info: ForField[_ <: A], a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
+            val results = fieldInstances.useCollect[Res, ForField[_ <: A]](fields, infos)([X] =>
+                (info: ForField[_ <: A], a: X, enc: Writes[X]) => encodeField(info, enc.writes(a)),
             )
             JsObject(results.flatten)
         end writes
@@ -78,7 +82,6 @@ object EvoWrites extends ConsistentTemplate[Writes, EvoWrites] with SummonHierar
                     obj + (field -> JsString(discrimValue))
                 case None               =>
                     JsObject.apply(Seq(discrimValue -> json))
-            end match
         end writes
     end SumWrites
 end EvoWrites
