@@ -70,12 +70,14 @@ trait Template:
         }
 
     inline def lazySummonForProduct[From, A: Mirror.ProductOf]: LazySummonByConfig[Provide, From, A] =
-        new:
+        class NamedLazySummonByConfig extends LazySummonByConfig[Provide, From, A]:
             def instance(using => Config[A]): Provide[A] = deriveForProduct[A]
+        new NamedLazySummonByConfig
 
     inline def lazySummonForSum[From, A: Mirror.SumOf]: LazySummonByConfig[Provide, From, A] =
-        new:
+        class NamedLazySummonByConfig extends LazySummonByConfig[Provide, From, A]:
             def instance(using => Config[A]): Provide[A] = deriveForSum[From, A]
+        new NamedLazySummonByConfig
 
     private[template] inline def deriveForSum[From, A](using
         config: => Config[A],

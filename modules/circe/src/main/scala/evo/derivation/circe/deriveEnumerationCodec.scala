@@ -63,7 +63,7 @@ private object EnumerationCodec:
         val matching: Matching[A] = Matching.create[A]
 
         val decoder: Decoder[A] = codecs.reduceLeft(_ or _)
-        new EnumerationCodec[A] {
+        class NamedEnumerationCodec extends EnumerationCodec[A] {
             def apply(c: HCursor): Decoder.Result[A] =
                 c.value.asString match
                     case None        => Left(DecodingFailure(s"Expected string value, got ${c.value}", c.history))
@@ -74,5 +74,6 @@ private object EnumerationCodec:
 
             def apply(a: A): Json = Json.fromString(matching.matched(a))
         }
+        new NamedEnumerationCodec
     }
 end EnumerationCodec

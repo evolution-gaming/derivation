@@ -17,11 +17,13 @@ object BaseEvoEq:
     inline given [A]: BaseEvoEq[A] =
         summonFrom {
             case byCats: cats.kernel.Eq[A] =>
-                new:
+                class NamedByCats extends BaseEvoEq[A]:
                     def eqv(a: A, b: A) = byCats.eqv(a, b)
+                new NamedByCats
             case byScala: Equiv[A]         =>
-                new:
+                class NamedByScala extends BaseEvoEq[A]:
                     def eqv(a: A, b: A) = byScala.equiv(a, b)
+                new NamedByScala
         }
 end BaseEvoEq
 

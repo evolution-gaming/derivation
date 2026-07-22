@@ -23,6 +23,9 @@ addCommandAlias("build", "+all compile test")
 val scala3Settings = scalacOptions ++= Vector(
   "-Yexplicit-nulls",
   "-Yshow-suppressed-errors",
+  "--explain",
+  "--explain-types",
+  "--deprecation",
 )
 
 val testDependencies = libraryDependencies ++= Vector(
