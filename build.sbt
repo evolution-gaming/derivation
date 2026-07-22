@@ -13,7 +13,7 @@ ThisBuild / organizationHomepage := Some(url("https://evolution.com"))
 
 ThisBuild / versionScheme := Some("early-semver")
 
-testFrameworks += new TestFramework("munit.Framework")
+testFrameworks += TestFrameworks.MUnit
 
 val scala3Settings = scalacOptions ++= Vector(
   "-Yexplicit-nulls",

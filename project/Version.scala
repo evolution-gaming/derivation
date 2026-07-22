@@ -3,7 +3,7 @@ object Version {
 
     val circe = "0.14.16"
 
-    val munit = "0.7.29"
+    val munit = "1.3.4"
 
     val tapir = "1.2.9"
 
