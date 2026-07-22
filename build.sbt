@@ -25,6 +25,8 @@ addCommandAlias("build", "+all compile test")
 val scala3Settings = scalacOptions ++= Vector(
   "-Yexplicit-nulls",
   "-Yshow-suppressed-errors",
+  "-encoding",
+  "utf-8",
   "--explain",
   "--explain-types",
   "--deprecation",
