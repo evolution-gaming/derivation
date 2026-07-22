@@ -1,5 +1,3 @@
-import sbt.librarymanagement.For3Use2_13
-
 name           := "derivation"
 publish / skip := true
 
@@ -94,7 +92,7 @@ lazy val `circe-compat_213` = project
     .settings(
       name                              := "derivation-circe-compat213",
       target                            := (file("modules") / "circe" / "target-compat213" / "jvm").getAbsoluteFile,
-      libraryDependencies += "io.circe" %% "circe-core" % Version.circe cross For3Use2_13(),
+      libraryDependencies += "io.circe" %% "circe-core" % Version.circe,
       defaultSettings,
     )
     .dependsOn(derivation)
