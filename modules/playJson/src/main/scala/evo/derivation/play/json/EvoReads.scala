@@ -41,11 +41,15 @@ object EvoReads extends ConsistentTemplate[Reads, EvoReads] with SummonHierarchy
     def newtype[A](using nt: ValueClass[A])(using reads: Reads[nt.Representation]): EvoReads[A] =
         json => json.validate[nt.Representation].map(nt.from)
 
-    def product[A](using mirror: Mirror.ProductOf[A])(
+    def product[A](using
+        mirror: Mirror.ProductOf[A],
+    )(
         fields: LazySummon.All[Reads, mirror.MirroredElemTypes],
     )(using => Config[A], A <:< Product): EvoReads[A] = new ProductReadsMake(fields)
 
-    def sum[A](using mirror: Mirror.SumOf[A])(
+    def sum[A](using
+        mirror: Mirror.SumOf[A],
+    )(
         subs: LazySummon.All[Reads, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, Reads[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoReads[A] =
@@ -64,8 +68,9 @@ object EvoReads extends ConsistentTemplate[Reads, EvoReads] with SummonHierarchy
                 for {
                     obj    <- json.validate[JsObject]
                     keys    = obj.keys
-                    result <- if keys.size == 1 then JsSuccess(keys.head)
-                              else JsError("Expecting an object with a single key")
+                    result <-
+                        if keys.size == 1 then JsSuccess(keys.head)
+                        else JsError("Expecting an object with a single key")
                 } yield (result, obj.apply(result))
 
     class ProductReadsMake[A](using mirror: Mirror.ProductOf[A])(

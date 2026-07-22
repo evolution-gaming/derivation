@@ -15,6 +15,8 @@ ThisBuild / versionScheme := Some("early-semver")
 
 testFrameworks += TestFrameworks.MUnit
 
+addCommandAlias("fmt", "scalafmtRepo")
+
 val scala3Settings = scalacOptions ++= Vector(
   "-Yexplicit-nulls",
   "-encoding",

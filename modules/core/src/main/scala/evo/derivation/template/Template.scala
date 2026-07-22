@@ -37,7 +37,9 @@ trait Template:
 
     /** called for the case classes derivation
       */
-    def product[A](using mirror: Mirror.ProductOf[A])(
+    def product[A](using
+        mirror: Mirror.ProductOf[A],
+    )(
         fields: LazySummon.All[OfField, mirror.MirroredElemTypes],
     )(using => Config[A], A <:< Product): Provide[A]
 
@@ -46,7 +48,9 @@ trait Template:
       * WARNING: mkSubMap makes assumption that you can use your subtype instances as instances for the target type, use
       * with great caution!
       */
-    def sum[A](using mirror: Mirror.SumOf[A])(
+    def sum[A](using
+        mirror: Mirror.SumOf[A],
+    )(
         subs: LazySummon.All[OfSubtype, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, OfSubtype[A]],
     )(using config: => Config[A], matching: Matching[A]): Provide[A]
@@ -113,7 +117,6 @@ trait ConsistentTemplate[TC[_], Prov[_]] extends Template:
     type OfSubtype[A] = TC[A]
     type OfNewtype[A] = TC[A]
     type Provide[A]   = Prov[A]
-end ConsistentTemplate
 
 /** event more simplified trait, useful when your define derivation for your own typeclass
   */

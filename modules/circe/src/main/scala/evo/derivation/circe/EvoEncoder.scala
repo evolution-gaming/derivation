@@ -20,7 +20,9 @@ abstract class EvoTemplateEncoder extends Template:
 
     type Provide[A] >: EvoObjectEncoder[A] <: EvoEncoder[A]
 
-    def product[A](using mirror: Mirror.ProductOf[A])(
+    def product[A](using
+        mirror: Mirror.ProductOf[A],
+    )(
         fieldInstances: LazySummon.All[Encoder, mirror.MirroredElemTypes],
     )(using config: => Config[A], ev: A <:< Product): EvoObjectEncoder[A] = new:
         lazy val infos = config.top.fields.map(_._2)
@@ -33,13 +35,15 @@ abstract class EvoTemplateEncoder extends Template:
         def encodeObject(a: A): JsonObject =
             val fields = tupleFromProduct(a)
             type Res = Vector[(String, Json)]
-            val results = fieldInstances.useCollect[Res, ForField[_]](fields, infos)(
-              [X] => (info: ForField[_], a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
+            val results = fieldInstances.useCollect[Res, ForField[_]](fields, infos)([X] =>
+                (info: ForField[_], a: X, enc: Encoder[X]) => encodeField(info, enc(a)),
             )
             JsonObject.fromIterable(results.flatten)
         end encodeObject
 
-    def sum[A](using mirror: Mirror.SumOf[A])(
+    def sum[A](using
+        mirror: Mirror.SumOf[A],
+    )(
         subs: LazySummon.All[Encoder, mirror.MirroredElemTypes],
         mkEncoders: => Map[String, Encoder[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoObjectEncoder[A] = new:
@@ -58,7 +62,6 @@ abstract class EvoTemplateEncoder extends Template:
                     (field -> Json.fromString(discrimValue)) +: obj
                 case None               =>
                     JsonObject.singleton(discrimValue, json)
-            end match
         end encodeObject
 end EvoTemplateEncoder
 

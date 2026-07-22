@@ -38,7 +38,6 @@ private object EnumerationCodec:
                 case Right(value) if value == name => Right(mirror.fromProduct(EmptyTuple))
                 case Right(value)                  => Left(DecodingFailure(s"got $value, expected $name", c.history))
                 case Left(err)                     => Left(err)
-        end apply
 
         def apply(a: A): Json = Json.fromString(name)
     }

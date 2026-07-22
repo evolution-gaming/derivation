@@ -30,12 +30,16 @@ trait EvoEq[A] extends BaseEvoEq[A] with cats.kernel.Eq[A] with Equiv[A]:
     def equiv(x: A, y: A): Boolean = eqv(x, y)
 
 object EvoEq extends ConsistentTemplate[BaseEvoEq, EvoEq] with SummonHierarchy:
-    override def product[A](using mirror: Mirror.ProductOf[A])(fields: All[BaseEvoEq, mirror.MirroredElemTypes])(using
+    override def product[A](using
+        mirror: Mirror.ProductOf[A],
+    )(fields: All[BaseEvoEq, mirror.MirroredElemTypes])(using
         => Config[A],
         A <:< Product,
     ): EvoEq[A] = ProductEq(fields)
 
-    override def sum[A](using mirror: Mirror.SumOf[A])(
+    override def sum[A](using
+        mirror: Mirror.SumOf[A],
+    )(
         subs: All[BaseEvoEq, mirror.MirroredElemTypes],
         mkSubMap: => Map[String, BaseEvoEq[A]],
     )(using config: => Config[A], matching: Matching[A]): EvoEq[A] = SumEq(mkSubMap)

@@ -27,5 +27,3 @@ case class AllAnnotations[T](
     subtypes: Vector[(String, AllAnnotations[T])],
 ):
     lazy val bySubtype = subtypes.toMap
-
-end AllAnnotations

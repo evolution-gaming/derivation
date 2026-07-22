@@ -36,5 +36,4 @@ object EvoObjectCodec:
         export encoder.encodeObject
 
         override def decodeAccumulating(c: HCursor) = decoder.decodeAccumulating(c)
-    end EvoCodecImpl
 end EvoObjectCodec
