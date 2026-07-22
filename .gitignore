@@ -8,3 +8,4 @@ project/**/metals.sbt
 .bsp
 .vscode
 .DS_Store
+target/
