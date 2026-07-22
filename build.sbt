@@ -119,7 +119,7 @@ lazy val playJson = project
     .in(modules / "playJson")
     .settings(
       name                                       := "derivation-play-json",
-      libraryDependencies += "com.typesafe.play" %% "play-json" % Version.playJson cross CrossVersion.for3Use2_13,
+      libraryDependencies += "org.playframework" %% "play-json" % Version.playJson,
       defaultSettings,
     )
     .dependsOn(derivation)
