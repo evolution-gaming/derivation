@@ -5,6 +5,8 @@ publish / skip := true
 
 ThisBuild / scalaVersion := Version.scala
 
+ThisBuild / versionPolicyIntention := Compatibility.BinaryCompatible
+
 ThisBuild / organization := "com.evolution"
 
 ThisBuild / startYear := Some(2022)
