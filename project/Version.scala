@@ -9,5 +9,7 @@ object Version {
 
     val playJson = "3.0.6"
 
+    val jackson = "2.18.11"
+
     val cats = "2.13.0"
 }

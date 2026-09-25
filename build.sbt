@@ -129,8 +129,12 @@ lazy val cats = project
 lazy val playJson = project
     .in(modules / "playJson")
     .settings(
-      name                                       := "derivation-play-json",
-      libraryDependencies += "org.playframework" %% "play-json" % Version.playJson,
+      name := "derivation-play-json",
+      libraryDependencies ++= Vector(
+        "org.playframework"         %% "play-json"        % Version.playJson,
+        "com.fasterxml.jackson.core" % "jackson-core"     % Version.jackson,
+        "com.fasterxml.jackson.core" % "jackson-databind" % Version.jackson,
+      ),
       defaultSettings,
     )
     .dependsOn(derivation)
